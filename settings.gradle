@@ -15,4 +15,5 @@ include 'samples:users'
 include 'samples:websocket'
 
 include 'spring-session'
+include 'spring-session-data-gemfire'
 include 'spring-session-data-redis'

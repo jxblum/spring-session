@@ -65,7 +65,7 @@ public class MapSessionRepository implements SessionRepository<ExpiringSession> 
 	 * @param defaultMaxInactiveInterval the number of seconds that the {@link Session} should be kept alive between client requests.
 	 */
 	public void setDefaultMaxInactiveInterval(int defaultMaxInactiveInterval) {
-		this.defaultMaxInactiveInterval = Integer.valueOf(defaultMaxInactiveInterval);
+		this.defaultMaxInactiveInterval = defaultMaxInactiveInterval;
 	}
 
 	public void save(ExpiringSession session) {

@@ -36,11 +36,9 @@ import org.junit.Test;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.data.gemfire.GemfireOperations;
 import org.springframework.data.gemfire.GemfireTemplate;
-import org.springframework.data.gemfire.client.Interest;
 import org.springframework.session.data.gemfire.GemFireOperationsSessionRepository;
 
 import com.gemstone.gemfire.cache.Cache;
-import com.gemstone.gemfire.cache.InterestResultPolicy;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionShortcut;
 import com.gemstone.gemfire.cache.client.ClientCache;
@@ -106,9 +104,17 @@ public class GemFireHttpSessionConfigurationTest {
 
 		assertThat(gemfireConfiguration.getMaxInactiveIntervalInSeconds(), is(equalTo(300)));
 
+		gemfireConfiguration.setMaxInactiveIntervalInSeconds(Integer.MAX_VALUE);
+
+		assertThat(gemfireConfiguration.getMaxInactiveIntervalInSeconds(), is(equalTo(Integer.MAX_VALUE)));
+
 		gemfireConfiguration.setMaxInactiveIntervalInSeconds(-1);
 
-		assertThat(gemfireConfiguration.getMaxInactiveIntervalInSeconds(), is(equalTo(0)));
+		assertThat(gemfireConfiguration.getMaxInactiveIntervalInSeconds(), is(equalTo(-1)));
+
+		gemfireConfiguration.setMaxInactiveIntervalInSeconds(Integer.MIN_VALUE);
+
+		assertThat(gemfireConfiguration.getMaxInactiveIntervalInSeconds(), is(equalTo(Integer.MIN_VALUE)));
 	}
 
 	@Test
@@ -195,57 +201,10 @@ public class GemFireHttpSessionConfigurationTest {
 	public void createAndInitializeSpringSessionGemFireRegionTemplate() {
 		Region mockRegion = mock(Region.class, "testCreateAndInitializeSpringSessionGemFireRegionTemplate");
 
-		GemfireTemplate template = gemfireConfiguration.springSessionGemFireRegionTemplate(mockRegion);
+		GemfireTemplate template = gemfireConfiguration.sessionGemFireRegionTemplate(mockRegion);
 
 		assertThat(template, is(notNullValue()));
 		assertThat(template.getRegion(), is(sameInstance(mockRegion)));
-	}
-
-	@Test
-	public void clientRegionShortcutsAreLocal() {
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.LOCAL), is(true));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.LOCAL_HEAP_LRU), is(true));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.LOCAL_OVERFLOW), is(true));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.LOCAL_PERSISTENT), is(true));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.LOCAL_PERSISTENT_OVERFLOW), is(true));
-	}
-
-	@Test
-	public void clientRegionShortcutsAreNotLocal() {
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.CACHING_PROXY), is(false));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.CACHING_PROXY_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.CACHING_PROXY_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isLocal(ClientRegionShortcut.PROXY), is(false));
-	}
-
-	@Test
-	public void emptyInterestsRegistration() {
-		Interest[] interests = gemfireConfiguration.registerInterests(false);
-
-		assertThat(interests, is(notNullValue()));
-		assertThat(interests.length, is(equalTo(0)));
-	}
-
-	@Test
-	public void allKeysInterestRegistration() {
-		Interest[] interests = gemfireConfiguration.registerInterests(true);
-
-		assertThat(interests, is(notNullValue()));
-		assertThat(interests.length, is(equalTo(1)));
-		assertThat(interests[0].isDurable(), is(false));
-		assertThat(interests[0].getKey().toString(), is(equalTo("ALL_KEYS")));
-		assertThat(interests[0].getPolicy(), is(equalTo(InterestResultPolicy.KEYS)));
-		assertThat(interests[0].isReceiveValues(), is(true));
-	}
-
-	@Test
-	public void clientCacheIsClient() {
-		assertThat(gemfireConfiguration.isClient(mock(ClientCache.class)), is(true));
-	}
-
-	@Test
-	public void peerCacheIsNotClient() {
-		assertThat(gemfireConfiguration.isClient(mock(Cache.class)), is(false));
 	}
 
 	@Test
@@ -287,54 +246,6 @@ public class GemFireHttpSessionConfigurationTest {
 		gemfireConfiguration.setServerRegionShortcut(RegionShortcut.PARTITION_PROXY);
 
 		assertThat(gemfireConfiguration.isExpirationAllowed(mockCache), is(false));
-	}
-
-	@Test
-	public void clientRegionShortcutIsProxy() {
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.PROXY), is(true));
-	}
-
-	@Test
-	public void clientRegionShortcutIsNotProxy() {
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.CACHING_PROXY), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.CACHING_PROXY_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.CACHING_PROXY_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.LOCAL), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.LOCAL_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.LOCAL_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.LOCAL_PERSISTENT), is(false));
-		assertThat(gemfireConfiguration.isProxy(ClientRegionShortcut.LOCAL_PERSISTENT_OVERFLOW), is(false));
-	}
-
-	@Test
-	public void regionShortcutIsProxy() {
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_PROXY), is(true));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_PROXY_REDUNDANT), is(true));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.REPLICATE_PROXY), is(true));
-	}
-
-	@Test
-	public void regionShortcutIsNotProxy() {
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.LOCAL), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.LOCAL_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.LOCAL_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.LOCAL_PERSISTENT), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.LOCAL_PERSISTENT_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.REPLICATE), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.REPLICATE_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.REPLICATE_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.REPLICATE_PERSISTENT), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.REPLICATE_PERSISTENT_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_PERSISTENT), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_PERSISTENT_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_REDUNDANT), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_REDUNDANT_HEAP_LRU), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_REDUNDANT_OVERFLOW), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_REDUNDANT_PERSISTENT), is(false));
-		assertThat(gemfireConfiguration.isProxy(RegionShortcut.PARTITION_REDUNDANT_PERSISTENT_OVERFLOW), is(false));
 	}
 
 }

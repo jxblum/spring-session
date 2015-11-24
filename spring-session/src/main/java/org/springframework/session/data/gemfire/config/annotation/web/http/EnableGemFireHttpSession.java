@@ -126,19 +126,19 @@ public @interface EnableGemFireHttpSession {
 	int maxInactiveIntervalInSeconds() default 1800;
 
 	/**
-	 * Defines the GemFire, Peer Cache Region DataPolicy.
-	 *
-	 * @return a RegionShortcut used to specify and configure the Peer Cache Region DataPolicy.
-	 * @see com.gemstone.gemfire.cache.RegionShortcut
-	 */
-	RegionShortcut serverRegionShortcut() default RegionShortcut.PARTITION;
-
-	/**
 	 * Defines the name of the GemFire (Client)Cache Region used to store Sessions.
 	 *
 	 * @return a String specifying the name of the GemFire (Client)Cache Region used to store Sessions.
 	 * @see com.gemstone.gemfire.cache.Region#getName()
 	 */
 	String regionName() default "ClusteredSpringSessions";
+
+	/**
+	 * Defines the GemFire, Peer Cache Region DataPolicy.
+	 *
+	 * @return a RegionShortcut used to specify and configure the Peer Cache Region DataPolicy.
+	 * @see com.gemstone.gemfire.cache.RegionShortcut
+	 */
+	RegionShortcut serverRegionShortcut() default RegionShortcut.PARTITION;
 
 }

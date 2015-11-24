@@ -50,13 +50,28 @@ import com.gemstone.gemfire.pdx.PdxWriter;
 @SuppressWarnings("all")
 public class GemFireOperationsSessionRepository extends AbstractGemFireOperationsSessionRepository {
 
+	// GemFire OQL query used to look up Sessions by principal name.
 	protected static final String FIND_SESSIONS_BY_PRINCIPAL_NAME_QUERY =
 		"SELECT s FROM %1$s s WHERE s.principalName = $1";
 
+	/**
+	 * Constructs an instance of GemFireOperationsSessionRepository initialized with the required GemfireOperations
+	 * object used to perform data access operations to manage Session state.
+	 *
+	 * @param template the GemfireOperations object used to access and manage Session state in GemFire.
+	 * @see org.springframework.data.gemfire.GemfireOperations
+	 */
 	public GemFireOperationsSessionRepository(GemfireOperations template) {
 		super(template);
 	}
 
+	/**
+	 * Looks up all the available Sessions tied to the specific user identified by principal name.
+	 *
+	 * @param principalName the principal name (i.e. username) to search for all existing Spring Sessions.
+	 * @return a mapping of Session ID to Session instances.
+	 * @see org.springframework.session.ExpiringSession
+	 */
 	@Override
 	public Map<String, ExpiringSession> findByPrincipalName(String principalName) {
 		SelectResults<ExpiringSession> results = getTemplate().find(String.format(
@@ -71,11 +86,27 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 		return sessions;
 	}
 
+	/**
+	 * Constructs a new {@link ExpiringSession} instance backed by GemFire.
+	 *
+	 * @return an instance of {@link ExpiringSession} backed by GemFire.
+	 * @see org.springframework.session.data.gemfire.GemFireOperationsSessionRepository.GemFireSession
+	 * @see org.springframework.session.ExpiringSession
+	 */
 	@Override
 	public ExpiringSession createSession() {
 		return GemFireSession.create(getMaxInactiveIntervalInSeconds());
 	}
 
+	/**
+	 * Gets a copy of an existing, non-expired {@link ExpiringSession} by ID.  If the Session is expired,
+	 * then it is deleted.
+	 *
+	 * @param sessionId a String indicating the ID of the Session to get.
+	 * @return an existing {@link ExpiringSession} by ID or null if not Session exists.
+	 * @see org.springframework.session.ExpiringSession
+	 * @see #delete(String)
+	 */
 	@Override
 	public ExpiringSession getSession(String sessionId) {
 		ExpiringSession storedSession = getTemplate().get(sessionId);
@@ -92,16 +123,37 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 		return null;
 	}
 
+	/**
+	 * Saves the specified {@link ExpiringSession} to GemFire.
+	 *
+	 * @param session the {@link ExpiringSession} to save.
+	 * @see org.springframework.session.ExpiringSession
+	 */
 	@Override
 	public void save(ExpiringSession session) {
 		getTemplate().put(session.getId(), new GemFireSession(session));
 	}
 
+	/**
+	 * Deletes (removes) any existing {@link ExpiringSession} from GemFire.  This operation also results in
+	 * a SessionDeletedEvent.
+	 *
+	 * @param sessionId a String indicating the ID of the Session to remove from GemFire.
+	 * @see #handleDeleted(String, ExpiringSession)
+	 */
 	@Override
 	public void delete(String sessionId) {
 		handleDeleted(sessionId, getTemplate().<Object, ExpiringSession>remove(sessionId));
 	}
 
+	/**
+	 * GemFireSession is a GemFire representation model of a Spring {@link ExpiringSession} for storing and accessing
+	 * Session state information in GemFire.  This class implements GemFire's {@link PdxSerializable} interface
+	 * to better handle replication of Session information across the GemFire cluster.
+	 *
+	 * @see org.springframework.session.ExpiringSession
+	 * @see com.gemstone.gemfire.pdx.PdxSerializable
+	 */
 	protected static class GemFireSession implements ExpiringSession, PdxSerializable {
 
 		protected static final DateFormat TO_STRING_DATE_FORMAT = new SimpleDateFormat("YYYY-MM-dd-HH-mm-ss");

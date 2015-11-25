@@ -17,15 +17,14 @@
 package org.springframework.session.data.gemfire.config.annotation.web.http;
 
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Resource;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.ImportAware;
 import org.springframework.core.annotation.AnnotationAttributes;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.data.gemfire.GemfireOperations;
 import org.springframework.data.gemfire.GemfireTemplate;
@@ -37,13 +36,11 @@ import org.springframework.session.config.annotation.web.http.SpringHttpSessionC
 import org.springframework.session.data.gemfire.GemFireOperationsSessionRepository;
 import org.springframework.session.data.gemfire.config.annotation.web.http.support.GemFireCacheTypeAwareRegionFactoryBean;
 import org.springframework.session.data.gemfire.support.GemFireUtils;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import com.gemstone.gemfire.cache.ExpirationAction;
 import com.gemstone.gemfire.cache.ExpirationAttributes;
 import com.gemstone.gemfire.cache.GemFireCache;
-import com.gemstone.gemfire.cache.PartitionAttributes;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionAttributes;
 import com.gemstone.gemfire.cache.RegionShortcut;
@@ -56,6 +53,7 @@ import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
  * @author John Blum
  * @see org.springframework.beans.factory.BeanClassLoaderAware
  * @see org.springframework.context.annotation.Bean
+ * @see org.springframework.context.annotation.Configuration
  * @see org.springframework.context.annotation.ImportAware
  * @see org.springframework.data.gemfire.GemfireOperations
  * @see org.springframework.data.gemfire.GemfireTemplate
@@ -67,11 +65,11 @@ import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
  * @see org.springframework.session.data.gemfire.config.annotation.web.http.support.GemFireCacheTypeAwareRegionFactoryBean
  * @see com.gemstone.gemfire.cache.ExpirationAttributes
  * @see com.gemstone.gemfire.cache.GemFireCache
- * @see com.gemstone.gemfire.cache.PartitionAttributes
  * @see com.gemstone.gemfire.cache.Region
  * @see com.gemstone.gemfire.cache.RegionAttributes
  * @since 1.1.0
  */
+@Configuration
 @SuppressWarnings("unused")
 public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfiguration
 		implements BeanClassLoaderAware, ImportAware {
@@ -217,20 +215,6 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 		AnnotationAttributes enableGemFireHttpSessionAnnotationAttributes = AnnotationAttributes.fromMap(
 			importMetadata.getAnnotationAttributes(EnableGemFireHttpSession.class.getName()));
 
-		if (enableGemFireHttpSessionAnnotationAttributes == null) {
-			for (Class<?> classToInspect = ClassUtils.resolveClassName(importMetadata.getClassName(), getBeanClassLoader());
-				 	classToInspect != null; classToInspect = classToInspect.getSuperclass()) {
-
-				EnableGemFireHttpSession enableGemFireHttpSessionAnnotation = AnnotationUtils.findAnnotation(
-					classToInspect, EnableGemFireHttpSession.class);
-
-				if (enableGemFireHttpSessionAnnotation != null) {
-					enableGemFireHttpSessionAnnotationAttributes = AnnotationAttributes.fromMap(
-						AnnotationUtils.getAnnotationAttributes(enableGemFireHttpSessionAnnotation));
-				}
-			}
-		}
-
 		setClientRegionShortcut(ClientRegionShortcut.class.cast(enableGemFireHttpSessionAnnotationAttributes.getEnum(
 			"clientRegionShortcut")));
 
@@ -266,15 +250,14 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * Defines a Spring GemfireTemplate bean used to interact with GemFire's (Client)Cache {@link Region}
 	 * storing Sessions.
 	 *
-	 * @param sessionGemFireRegion the GemFire (Client)Cache {@link Region} used to store Sessions.
 	 * @return a {@link GemfireTemplate} used to interact with GemFire's (Client)Cache {@link Region} storing Sessions.
 	 * @see org.springframework.data.gemfire.GemfireTemplate
 	 * @see com.gemstone.gemfire.cache.Region
 	 */
 	@Bean
-	@Resource(name = DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME)
-	public GemfireTemplate sessionGemFireRegionTemplate(Region<Object, ExpiringSession> sessionGemFireRegion) {
-		return new GemfireTemplate(sessionGemFireRegion);
+	@DependsOn(DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME)
+	public GemfireTemplate sessionGemFireRegionTemplate(GemFireCache gemFireCache) {
+		return new GemfireTemplate(gemFireCache.getRegion(getSpringSessionGemFireRegionName()));
 	}
 
 	/**
@@ -314,9 +297,6 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * GemFire cache {@link Region} is a not a proxy, on either the client or server.
 	 *
 	 * @param gemfireCache a reference to the GemFire cache.
-	 * @param sessionGemFireRegionPartitionAttributes a reference to {@link PartitionAttributes} encapsulating
-	 * additional configuration meta-data to configure {@link com.gemstone.gemfire.cache.DataPolicy#PARTITION}
-	 * {@link Region}s.
 	 * @return an instance of {@link RegionAttributes} used to configure and initialize the GemFire cache {@link Region}
 	 * for storing and managing Sessions.
 	 * @see org.springframework.data.gemfire.RegionAttributesFactoryBean
@@ -325,16 +305,12 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see #isExpirationAllowed(GemFireCache)
 	 */
 	@Bean
-	@Autowired(required = false)
 	@SuppressWarnings("unchecked")
-	public RegionAttributesFactoryBean sessionGemFireRegionAttributes(GemFireCache gemfireCache,
-			PartitionAttributes sessionGemFireRegionPartitionAttributes) {
-
+	public RegionAttributesFactoryBean sessionGemFireRegionAttributes(GemFireCache gemfireCache) {
 		RegionAttributesFactoryBean regionAttributes = new RegionAttributesFactoryBean();
 
 		regionAttributes.setKeyConstraint(SPRING_SESSION_GEMFIRE_REGION_KEY_CONSTRAINT);
 		regionAttributes.setValueConstraint(SPRING_SESSION_GEMFIRE_REGION_VALUE_CONSTRAINT);
-		regionAttributes.setPartitionAttributes(sessionGemFireRegionPartitionAttributes);
 
 		if (isExpirationAllowed(gemfireCache)) {
 			regionAttributes.setStatisticsEnabled(true);
@@ -372,6 +348,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see com.gemstone.gemfire.cache.GemFireCache
 	 */
 	@Bean
+	@DependsOn(DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME)
 	public IndexFactoryBean principalNameIndex(final GemFireCache gemfireCache) {
 
 		IndexFactoryBean index = new IndexFactoryBean() {
@@ -385,7 +362,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 		index.setCache(gemfireCache);
 		index.setName("principalNameIdx");
 		index.setExpression("principalName");
-		index.setFrom(getSpringSessionGemFireRegionName());
+		index.setFrom(GemFireUtils.toRegionPath(getSpringSessionGemFireRegionName()));
 		index.setOverride(true);
 		index.setType(IndexType.HASH);
 

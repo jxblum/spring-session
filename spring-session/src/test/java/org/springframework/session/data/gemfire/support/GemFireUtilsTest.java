@@ -16,6 +16,7 @@
 
 package org.springframework.session.data.gemfire.support;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -132,6 +133,15 @@ public class GemFireUtilsTest {
 		assertThat(GemFireUtils.isProxy(RegionShortcut.PARTITION_REDUNDANT_OVERFLOW), is(false));
 		assertThat(GemFireUtils.isProxy(RegionShortcut.PARTITION_REDUNDANT_PERSISTENT), is(false));
 		assertThat(GemFireUtils.isProxy(RegionShortcut.PARTITION_REDUNDANT_PERSISTENT_OVERFLOW), is(false));
+	}
+
+	@Test
+	public void toRegionPath() {
+		assertThat(GemFireUtils.toRegionPath("A"), is(equalTo("/A")));
+		assertThat(GemFireUtils.toRegionPath("Example"), is(equalTo("/Example")));
+		assertThat(GemFireUtils.toRegionPath("/Example"), is(equalTo("//Example")));
+		assertThat(GemFireUtils.toRegionPath("/"), is(equalTo("//")));
+		assertThat(GemFireUtils.toRegionPath(""), is(equalTo("/")));
 	}
 
 }

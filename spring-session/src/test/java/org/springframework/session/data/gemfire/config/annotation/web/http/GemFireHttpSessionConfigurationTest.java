@@ -39,6 +39,7 @@ import org.springframework.data.gemfire.GemfireTemplate;
 import org.springframework.session.data.gemfire.GemFireOperationsSessionRepository;
 
 import com.gemstone.gemfire.cache.Cache;
+import com.gemstone.gemfire.cache.GemFireCache;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionShortcut;
 import com.gemstone.gemfire.cache.client.ClientCache;
@@ -199,12 +200,20 @@ public class GemFireHttpSessionConfigurationTest {
 	@Test
 	@SuppressWarnings("unchecked")
 	public void createAndInitializeSpringSessionGemFireRegionTemplate() {
-		Region mockRegion = mock(Region.class, "testCreateAndInitializeSpringSessionGemFireRegionTemplate");
+		GemFireCache mockGemFireCache = mock(GemFireCache.class);
+		Region mockRegion = mock(Region.class);
 
-		GemfireTemplate template = gemfireConfiguration.sessionGemFireRegionTemplate(mockRegion);
+		when(mockGemFireCache.getRegion(eq("Example"))).thenReturn(mockRegion);
 
+		gemfireConfiguration.setSpringSessionGemFireRegionName("Example");
+
+		GemfireTemplate template = gemfireConfiguration.sessionGemFireRegionTemplate(mockGemFireCache);
+
+		assertThat(gemfireConfiguration.getSpringSessionGemFireRegionName(), is(equalTo("Example")));
 		assertThat(template, is(notNullValue()));
 		assertThat(template.getRegion(), is(sameInstance(mockRegion)));
+
+		verify(mockGemFireCache, times(1)).getRegion(eq("Example"));
 	}
 
 	@Test

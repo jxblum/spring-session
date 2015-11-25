@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -167,6 +168,10 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 
 		private String id;
 
+		public GemFireSession() {
+			this.creationTime = System.currentTimeMillis();
+		}
+
 		public GemFireSession(String id) {
 			Assert.hasText(id, "The Session ID must be specified");
 
@@ -278,7 +283,7 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			writer.writeInt("maxInactiveIntervalInSeconds", getMaxInactiveIntervalInSeconds());
 			writer.writeString("principalName", getPrincipalName());
 
-			Set<String> attributeNames = nullSafeSet(getAttributeNames());
+			Set<String> attributeNames = new HashSet<String>(nullSafeSet(getAttributeNames()));
 
 			writer.writeObject("attributeNames", attributeNames);
 

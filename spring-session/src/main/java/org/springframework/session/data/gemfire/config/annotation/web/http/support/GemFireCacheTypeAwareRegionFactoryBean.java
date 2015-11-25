@@ -186,7 +186,7 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 
 	/**
 	 * Returns the specific type of GemFire cache {@link Region} this factory creates when initialized
-	 * or {@link Region#getClass()} when uninitialized.
+	 * or Region.class when uninitialized.
 	 *
 	 * @return the GemFire cache {@link Region} class type constructed by this factory.
 	 * @see com.gemstone.gemfire.cache.Region
@@ -210,7 +210,7 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	/**
 	 * Sets the {@link Region} data policy used by the GemFire cache client to manage Session state.
 	 *
-	 * @param clientRegionShortcut a {@link ClientRegionShortcut} to specify the client {@link Region's}
+	 * @param clientRegionShortcut a {@link ClientRegionShortcut} to specify the client {@link Region}
 	 * data management policy.
 	 * @see com.gemstone.gemfire.cache.client.ClientRegionShortcut
 	 */
@@ -222,7 +222,7 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	 * Returns the {@link Region} data policy used by the GemFire cache client to manage Session state.  Defaults to
 	 * {@link ClientRegionShortcut#PROXY}.
 	 *
-	 * @return a {@link ClientRegionShortcut} specifying the client {@link Region's} data management policy.
+	 * @return a {@link ClientRegionShortcut} specifying the client {@link Region} data management policy.
 	 * @see org.springframework.session.data.gemfire.config.annotation.web.http.GemFireHttpSessionConfiguration#DEFAULT_CLIENT_REGION_SHORTCUT
 	 * @see com.gemstone.gemfire.cache.client.ClientRegionShortcut
 	 */
@@ -297,7 +297,7 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	/**
 	 * Sets the {@link Region} data policy used by the GemFire peer cache to manage Session state.
 	 *
-	 * @param serverRegionShortcut a {@link RegionShortcut} to specify the peer {@link Region's} data management policy.
+	 * @param serverRegionShortcut a {@link RegionShortcut} to specify the peer {@link Region} data management policy.
 	 * @see com.gemstone.gemfire.cache.RegionShortcut
 	 */
 	public void setServerRegionShortcut(RegionShortcut serverRegionShortcut) {
@@ -308,7 +308,7 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	 * Returns the {@link Region} data policy used by the GemFire peer cache to manage Session state. Defaults to
 	 * {@link RegionShortcut#PARTITION}.
 	 *
-	 * @return a {@link RegionShortcut} specifying the peer {@link Region's} data management policy.
+	 * @return a {@link RegionShortcut} specifying the peer {@link Region} data management policy.
 	 * @see com.gemstone.gemfire.cache.RegionShortcut
 	 */
 	protected RegionShortcut getServerRegionShortcut() {

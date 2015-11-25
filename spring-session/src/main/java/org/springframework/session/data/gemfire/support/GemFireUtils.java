@@ -18,6 +18,7 @@ package org.springframework.session.data.gemfire.support;
 
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.GemFireCache;
+import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionShortcut;
 import com.gemstone.gemfire.cache.client.ClientCache;
 import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
@@ -113,6 +114,18 @@ public abstract class GemFireUtils {
 			default:
 				return false;
 		}
+	}
+
+	/**
+	 * Converts a {@link Region} name to a {@link Region} path.
+	 *
+	 * @param regionName a String specifying the name of the {@link Region}.
+	 * @return a String path for the given {@link Region} by name.
+	 * @see com.gemstone.gemfire.cache.Region#getFullPath()
+	 * @see com.gemstone.gemfire.cache.Region#getName()
+	 */
+	public static String toRegionPath(String regionName) {
+		return String.format("%1$s%2$s", Region.SEPARATOR, regionName);
 	}
 
 }

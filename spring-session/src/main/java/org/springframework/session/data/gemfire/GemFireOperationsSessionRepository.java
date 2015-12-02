@@ -155,7 +155,7 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 * @see org.springframework.session.ExpiringSession
 	 * @see com.gemstone.gemfire.pdx.PdxSerializable
 	 */
-	protected static class GemFireSession implements ExpiringSession, PdxSerializable {
+	public static class GemFireSession implements ExpiringSession, PdxSerializable {
 
 		protected static final DateFormat TO_STRING_DATE_FORMAT = new SimpleDateFormat("YYYY-MM-dd-HH-mm-ss");
 
@@ -169,13 +169,11 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 		private String id;
 
 		public GemFireSession() {
-			this.creationTime = System.currentTimeMillis();
+			this(UUID.randomUUID().toString());
 		}
 
 		public GemFireSession(String id) {
-			Assert.hasText(id, "The Session ID must be specified");
-
-			this.id = id;
+			this.id = validateId(id);
 			this.creationTime = System.currentTimeMillis();
 		}
 
@@ -193,7 +191,7 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 		}
 
 		public static GemFireSession create(int maxInactiveIntervalInSeconds) {
-			GemFireSession session = new GemFireSession(UUID.randomUUID().toString());
+			GemFireSession session = new GemFireSession();
 			session.setMaxInactiveIntervalInSeconds(maxInactiveIntervalInSeconds);
 			return session;
 		}
@@ -202,6 +200,11 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			GemFireSession session = new GemFireSession(expiringSession);
 			session.setLastAccessedTime(System.currentTimeMillis());
 			return session;
+		}
+
+		private String validateId(String id) {
+			Assert.hasText(id, "The Session ID must be specified");
+			return id;
 		}
 
 		@Override

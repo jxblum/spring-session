@@ -54,6 +54,7 @@ import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
  * @see org.mockito.Mockito
  * @see org.springframework.session.data.gemfire.config.annotation.web.http.GemFireHttpSessionConfiguration
  * @see com.gemstone.gemfire.cache.Cache
+ * @see com.gemstone.gemfire.cache.GemFireCache
  * @see com.gemstone.gemfire.cache.Region
  * @see com.gemstone.gemfire.cache.client.ClientCache
  * @since 1.0.0
@@ -207,7 +208,7 @@ public class GemFireHttpSessionConfigurationTest {
 
 		gemfireConfiguration.setSpringSessionGemFireRegionName("Example");
 
-		GemfireTemplate template = gemfireConfiguration.sessionGemFireRegionTemplate(mockGemFireCache);
+		GemfireTemplate template = gemfireConfiguration.sessionRegionTemplate(mockGemFireCache);
 
 		assertThat(gemfireConfiguration.getSpringSessionGemFireRegionName(), is(equalTo("Example")));
 		assertThat(template, is(notNullValue()));

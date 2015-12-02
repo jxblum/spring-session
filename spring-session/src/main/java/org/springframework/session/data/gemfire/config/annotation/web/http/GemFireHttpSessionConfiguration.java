@@ -34,6 +34,7 @@ import org.springframework.data.gemfire.RegionAttributesFactoryBean;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.config.annotation.web.http.SpringHttpSessionConfiguration;
 import org.springframework.session.data.gemfire.GemFireOperationsSessionRepository;
+import org.springframework.session.data.gemfire.GemFireOperationsSessionRepository.GemFireSession;
 import org.springframework.session.data.gemfire.config.annotation.web.http.support.GemFireCacheTypeAwareRegionFactoryBean;
 import org.springframework.session.data.gemfire.support.GemFireUtils;
 import org.springframework.util.StringUtils;
@@ -77,7 +78,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	public static final int DEFAULT_MAX_INACTIVE_INTERVAL_IN_SECONDS = (int) TimeUnit.MINUTES.toSeconds(30);
 
 	protected static final Class<Object> SPRING_SESSION_GEMFIRE_REGION_KEY_CONSTRAINT = Object.class;
-	protected static final Class<ExpiringSession> SPRING_SESSION_GEMFIRE_REGION_VALUE_CONSTRAINT = ExpiringSession.class;
+	protected static final Class<GemFireSession> SPRING_SESSION_GEMFIRE_REGION_VALUE_CONSTRAINT = GemFireSession.class;
 
 	public static final ClientRegionShortcut DEFAULT_CLIENT_REGION_SHORTCUT = ClientRegionShortcut.PROXY;
 
@@ -236,8 +237,8 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see org.springframework.data.gemfire.GemfireOperations
 	 */
 	@Bean
-	public GemFireOperationsSessionRepository sessionRepository(
-			@Qualifier("sessionGemFireRegionTemplate") GemfireOperations gemfireOperations) {
+	public GemFireOperationsSessionRepository sessionRepository(@Qualifier("sessionRegionTemplate")
+			GemfireOperations gemfireOperations) {
 
 		GemFireOperationsSessionRepository sessionRepository = new GemFireOperationsSessionRepository(gemfireOperations);
 
@@ -256,7 +257,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 */
 	@Bean
 	@DependsOn(DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME)
-	public GemfireTemplate sessionGemFireRegionTemplate(GemFireCache gemFireCache) {
+	public GemfireTemplate sessionRegionTemplate(GemFireCache gemFireCache) {
 		return new GemfireTemplate(gemFireCache.getRegion(getSpringSessionGemFireRegionName()));
 	}
 
@@ -265,7 +266,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * and manage Sessions using either a client-server or peer-to-peer (p2p) topology.
 	 *
 	 * @param gemfireCache a reference to the GemFire {@link com.gemstone.gemfire.cache.Cache}.
-	 * @param sessionGemFireRegionAttributes the GemFire {@link RegionAttributes} used to configure the {@link Region}.
+	 * @param sessionRegionAttributes the GemFire {@link RegionAttributes} used to configure the {@link Region}.
 	 * @return a {@link GemFireCacheTypeAwareRegionFactoryBean} used to configure and initialize a GemFire Cache
 	 * {@link Region} for storing and managing Sessions.
 	 * @see org.springframework.session.data.gemfire.config.annotation.web.http.support.GemFireCacheTypeAwareRegionFactoryBean
@@ -276,15 +277,15 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see #getServerRegionShortcut()
 	 */
 	@Bean(name = DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME)
-	public GemFireCacheTypeAwareRegionFactoryBean<Object, ExpiringSession> sessionGemFireRegion(GemFireCache gemfireCache,
-			RegionAttributes<Object, ExpiringSession> sessionGemFireRegionAttributes) {
+	public GemFireCacheTypeAwareRegionFactoryBean<Object, ExpiringSession> sessionRegion(GemFireCache gemfireCache,
+			RegionAttributes<Object, ExpiringSession> sessionRegionAttributes) {
 
 		GemFireCacheTypeAwareRegionFactoryBean<Object, ExpiringSession> serverRegion =
 			new GemFireCacheTypeAwareRegionFactoryBean<Object, ExpiringSession>();
 
 		serverRegion.setGemfireCache(gemfireCache);
 		serverRegion.setClientRegionShortcut(getClientRegionShortcut());
-		serverRegion.setRegionAttributes(sessionGemFireRegionAttributes);
+		serverRegion.setRegionAttributes(sessionRegionAttributes);
 		serverRegion.setRegionName(getSpringSessionGemFireRegionName());
 		serverRegion.setServerRegionShortcut(getServerRegionShortcut());
 
@@ -306,7 +307,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 */
 	@Bean
 	@SuppressWarnings("unchecked")
-	public RegionAttributesFactoryBean sessionGemFireRegionAttributes(GemFireCache gemfireCache) {
+	public RegionAttributesFactoryBean sessionRegionAttributes(GemFireCache gemfireCache) {
 		RegionAttributesFactoryBean regionAttributes = new RegionAttributesFactoryBean();
 
 		regionAttributes.setKeyConstraint(SPRING_SESSION_GEMFIRE_REGION_KEY_CONSTRAINT);
@@ -350,7 +351,6 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	@Bean
 	@DependsOn(DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME)
 	public IndexFactoryBean principalNameIndex(final GemFireCache gemfireCache) {
-
 		IndexFactoryBean index = new IndexFactoryBean() {
 			@Override public void afterPropertiesSet() throws Exception {
 				if (GemFireUtils.isPeer(gemfireCache)) {

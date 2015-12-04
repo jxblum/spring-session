@@ -178,7 +178,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionCreatedEvent.class)));
@@ -219,7 +219,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionCreatedEvent.class)));
@@ -262,7 +262,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDestroyedEvent.class)));
@@ -303,7 +303,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDestroyedEvent.class)));
@@ -346,7 +346,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionExpiredEvent.class)));
@@ -387,7 +387,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionExpiredEvent.class)));
@@ -429,7 +429,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDeletedEvent.class)));
@@ -460,7 +460,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		ApplicationEventPublisher mockApplicationEventPublisher = mock(ApplicationEventPublisher.class);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDeletedEvent.class)));
@@ -508,27 +508,22 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 			super(gemfireOperations);
 		}
 
-		@Override
 		public Map<String, ExpiringSession> findByPrincipalName(String principalName) {
 			throw new UnsupportedOperationException("not implemented");
 		}
 
-		@Override
 		public ExpiringSession createSession() {
 			throw new UnsupportedOperationException("not implemented");
 		}
 
-		@Override
 		public ExpiringSession getSession(String id) {
 			throw new UnsupportedOperationException("not implemented");
 		}
 
-		@Override
 		public void save(ExpiringSession session) {
 			throw new UnsupportedOperationException("not implemented");
 		}
 
-		@Override
 		public void delete(String id) {
 			throw new UnsupportedOperationException("not implemented");
 		}

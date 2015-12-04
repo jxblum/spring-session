@@ -268,7 +268,6 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 			return localSessionEvent;
 		}
 
-		@Override
 		public synchronized void onApplicationEvent(AbstractSessionEvent event) {
 			sessionEvent = event;
 		}

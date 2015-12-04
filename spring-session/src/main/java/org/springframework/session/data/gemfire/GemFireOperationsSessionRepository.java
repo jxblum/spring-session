@@ -73,7 +73,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 * @return a mapping of Session ID to Session instances.
 	 * @see org.springframework.session.ExpiringSession
 	 */
-	@Override
 	public Map<String, ExpiringSession> findByPrincipalName(String principalName) {
 		SelectResults<ExpiringSession> results = getTemplate().find(String.format(
 			FIND_SESSIONS_BY_PRINCIPAL_NAME_QUERY, getFullyQualifiedRegionName()), principalName);
@@ -94,7 +93,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 * @see org.springframework.session.data.gemfire.GemFireOperationsSessionRepository.GemFireSession
 	 * @see org.springframework.session.ExpiringSession
 	 */
-	@Override
 	public ExpiringSession createSession() {
 		return GemFireSession.create(getMaxInactiveIntervalInSeconds());
 	}
@@ -108,7 +106,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 * @see org.springframework.session.ExpiringSession
 	 * @see #delete(String)
 	 */
-	@Override
 	public ExpiringSession getSession(String sessionId) {
 		ExpiringSession storedSession = getTemplate().get(sessionId);
 
@@ -130,7 +127,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 * @param session the {@link ExpiringSession} to save.
 	 * @see org.springframework.session.ExpiringSession
 	 */
-	@Override
 	public void save(ExpiringSession session) {
 		getTemplate().put(session.getId(), new GemFireSession(session));
 	}
@@ -142,7 +138,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 * @param sessionId a String indicating the ID of the Session to remove from GemFire.
 	 * @see #handleDeleted(String, ExpiringSession)
 	 */
-	@Override
 	public void delete(String sessionId) {
 		handleDeleted(sessionId, getTemplate().<Object, ExpiringSession>remove(sessionId));
 	}
@@ -207,12 +202,10 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			return id;
 		}
 
-		@Override
 		public String getId() {
 			return id;
 		}
 
-		@Override
 		public void setAttribute(String attributeName, Object attributeValue) {
 			if (attributeValue != null) {
 				sessionAttributes.put(attributeName, attributeValue);
@@ -222,27 +215,22 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			}
 		}
 
-		@Override
 		public void removeAttribute(String attributeName) {
 			sessionAttributes.remove(attributeName);
 		}
 
-		@Override
 		public <T> T getAttribute(String attributeName) {
 			return (T) sessionAttributes.get(attributeName);
 		}
 
-		@Override
 		public Set<String> getAttributeNames() {
 			return Collections.unmodifiableSet(sessionAttributes.keySet());
 		}
 
-		@Override
 		public long getCreationTime() {
 			return creationTime;
 		}
 
-		@Override
 		public boolean isExpired() {
 			long lastAccessedTime = getLastAccessedTime();
 			long maxInactiveIntervalInSeconds = getMaxInactiveIntervalInSeconds();
@@ -255,17 +243,14 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			this.lastAccessedTime = lastAccessedTime;
 		}
 
-		@Override
 		public long getLastAccessedTime() {
 			return lastAccessedTime;
 		}
 
-		@Override
 		public void setMaxInactiveIntervalInSeconds(final int interval) {
 			this.maxInactiveIntervalInSeconds = interval;
 		}
 
-		@Override
 		public int getMaxInactiveIntervalInSeconds() {
 			return maxInactiveIntervalInSeconds;
 		}
@@ -278,7 +263,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			return getAttribute(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME);
 		}
 
-		@Override
 		public void toData(PdxWriter writer) {
 			writer.writeString("id", getId());
 			writer.writeLong("creationTime", getCreationTime());
@@ -295,7 +279,6 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			}
 		}
 
-		@Override
 		public void fromData(PdxReader reader) {
 			id = reader.readString("id");
 			creationTime = reader.readLong("creationTime");

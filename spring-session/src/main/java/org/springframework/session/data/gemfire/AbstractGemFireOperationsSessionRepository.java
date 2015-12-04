@@ -59,7 +59,7 @@ public abstract class AbstractGemFireOperationsSessionRepository extends CacheLi
 	private int maxInactiveIntervalInSeconds = GemFireHttpSessionConfiguration.DEFAULT_MAX_INACTIVE_INTERVAL_IN_SECONDS;
 
 	private ApplicationEventPublisher applicationEventPublisher = new ApplicationEventPublisher() {
-		@Override public void publishEvent(ApplicationEvent event) {
+		public void publishEvent(ApplicationEvent event) {
 		}
 	};
 
@@ -97,7 +97,6 @@ public abstract class AbstractGemFireOperationsSessionRepository extends CacheLi
 	 * @param applicationEventPublisher the Spring ApplicationEventPublisher used to publish Session-based events.
 	 * @see org.springframework.context.ApplicationEventPublisher
 	 */
-	@Override
 	public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
 		Assert.notNull(applicationEventPublisher, "ApplicationEventPublisher must not be null");
 		this.applicationEventPublisher = applicationEventPublisher;
@@ -161,7 +160,6 @@ public abstract class AbstractGemFireOperationsSessionRepository extends CacheLi
 	 *
 	 * @throws Exception if an error occurs during the initialization process.
 	 */
-	@Override
 	public void afterPropertiesSet() throws Exception {
 		GemfireOperations template = getTemplate();
 

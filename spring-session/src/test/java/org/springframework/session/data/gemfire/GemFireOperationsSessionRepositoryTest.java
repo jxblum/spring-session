@@ -216,7 +216,7 @@ public class GemFireOperationsSessionRepositoryTest {
 		when(mockTemplate.remove(eq(expectedSessionId))).thenReturn(mockSession);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDeletedEvent.class)));
@@ -299,7 +299,7 @@ public class GemFireOperationsSessionRepositoryTest {
 
 		when(mockTemplate.put(eq(expectedSessionId), isA(GemFireSession.class)))
 			.thenAnswer(new Answer<ExpiringSession>() {
-				@Override public ExpiringSession answer(final InvocationOnMock invocation) throws Throwable {
+				public ExpiringSession answer(final InvocationOnMock invocation) throws Throwable {
 					ExpiringSession session = invocation.getArgumentAt(1, ExpiringSession.class);
 
 					assertThat(session, is(notNullValue()));
@@ -334,7 +334,7 @@ public class GemFireOperationsSessionRepositoryTest {
 		when(mockTemplate.remove(eq(expectedSessionId))).thenReturn(mockSession);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDeletedEvent.class)));
@@ -363,7 +363,7 @@ public class GemFireOperationsSessionRepositoryTest {
 		when(mockTemplate.remove(anyString())).thenReturn(null);
 
 		doAnswer(new Answer<Void>() {
-			@Override public Void answer(final InvocationOnMock invocation) throws Throwable {
+			public Void answer(final InvocationOnMock invocation) throws Throwable {
 				ApplicationEvent applicationEvent = invocation.getArgumentAt(0, ApplicationEvent.class);
 
 				assertThat(applicationEvent, is(instanceOf(SessionDeletedEvent.class)));

@@ -50,7 +50,6 @@ import com.gemstone.gemfire.management.internal.cli.util.spring.StringUtils;
  * @see com.gemstone.gemfire.cache.client.ClientRegionShortcut
  * @since 1.1.0
  */
-@SuppressWarnings("unused")
 public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean<Region<K, V>>, InitializingBean {
 
 	protected static final ClientRegionShortcut DEFAULT_CLIENT_REGION_SHORTCUT =
@@ -85,7 +84,6 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	 * @see #newClientRegion(GemFireCache)
 	 * @see #newServerRegion(GemFireCache)
 	 */
-	@Override
 	public void afterPropertiesSet() throws Exception {
 		GemFireCache gemfireCache = getGemfireCache();
 
@@ -179,7 +177,6 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	 * @throws Exception if the {@link Region} reference cannot be obtained.
 	 * @see com.gemstone.gemfire.cache.Region
 	 */
-	@Override
 	public Region<K, V> getObject() throws Exception {
 		return region;
 	}
@@ -192,7 +189,6 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	 * @see com.gemstone.gemfire.cache.Region
 	 * @see java.lang.Class
 	 */
-	@Override
 	public Class<?> getObjectType() {
 		return (region != null ? region.getClass() : Region.class);
 	}
@@ -202,7 +198,6 @@ public class GemFireCacheTypeAwareRegionFactoryBean<K, V> implements FactoryBean
 	 *
 	 * @return true to indicate the GemFire cache {@link Region} storing and managing Sessions is a Singleton.
 	 */
-	@Override
 	public boolean isSingleton() {
 		return true;
 	}

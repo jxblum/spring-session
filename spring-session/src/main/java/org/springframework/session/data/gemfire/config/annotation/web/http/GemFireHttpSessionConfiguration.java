@@ -71,7 +71,6 @@ import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
  * @since 1.1.0
  */
 @Configuration
-@SuppressWarnings("unused")
 public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfiguration
 		implements BeanClassLoaderAware, ImportAware {
 
@@ -103,7 +102,6 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see org.springframework.beans.factory.BeanClassLoaderAware#setBeanClassLoader(ClassLoader)
 	 * @see java.lang.ClassLoader
 	 */
-	@Override
 	public void setBeanClassLoader(ClassLoader beanClassLoader) {
 		this.beanClassLoader = beanClassLoader;
 	}
@@ -211,7 +209,6 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see org.springframework.session.data.gemfire.config.annotation.web.http.EnableGemFireHttpSession
 	 * @see org.springframework.core.type.AnnotationMetadata
 	 */
-	@Override
 	public void setImportMetadata(AnnotationMetadata importMetadata) {
 		AnnotationAttributes enableGemFireHttpSessionAnnotationAttributes = AnnotationAttributes.fromMap(
 			importMetadata.getAnnotationAttributes(EnableGemFireHttpSession.class.getName()));
@@ -306,7 +303,7 @@ public class GemFireHttpSessionConfiguration extends SpringHttpSessionConfigurat
 	 * @see #isExpirationAllowed(GemFireCache)
 	 */
 	@Bean
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	public RegionAttributesFactoryBean sessionRegionAttributes(GemFireCache gemfireCache) {
 		RegionAttributesFactoryBean regionAttributes = new RegionAttributesFactoryBean();
 

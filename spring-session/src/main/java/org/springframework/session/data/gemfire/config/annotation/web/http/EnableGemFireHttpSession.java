@@ -106,7 +106,6 @@ import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
 @Target(ElementType.TYPE)
 @Configuration
 @Import(GemFireHttpSessionConfiguration.class)
-@SuppressWarnings("unused")
 public @interface EnableGemFireHttpSession {
 
 	/**

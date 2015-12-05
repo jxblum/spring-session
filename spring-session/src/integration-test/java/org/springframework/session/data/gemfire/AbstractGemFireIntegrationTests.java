@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.data.gemfire.support.GemFireUtils;
@@ -52,17 +52,15 @@ import com.gemstone.gemfire.cache.Region;
 @SuppressWarnings("unused")
 public class AbstractGemFireIntegrationTests {
 
-	protected static final Boolean ENABLE_QUERY_DEBUGGING = false;
-
 	@Autowired
 	protected Cache gemfireCache;
 
 	@Autowired
 	protected GemFireOperationsSessionRepository gemfireSessionRepository;
 
-	@BeforeClass
-	public static void setupBeforeClass() {
-		System.setProperty("gemfire.Query.VERBOSE", ENABLE_QUERY_DEBUGGING.toString());
+	@Before
+	public void setup() {
+		System.setProperty("gemfire.Query.VERBOSE", String.valueOf(enableQueryDebugging()));
 	}
 
 	protected void assertRegion(Region<?, ?> actualRegion, String expectedName, DataPolicy expectedDataPolicy) {
@@ -98,6 +96,10 @@ public class AbstractGemFireIntegrationTests {
 		return (T) session;
 	}
 
+	protected boolean enableQueryDebugging() {
+		return false;
+	}
+
 	protected List<String> listRegions(GemFireCache gemfireCache) {
 		Set<Region<?, ?>> regions = gemfireCache.rootRegions();
 
@@ -108,6 +110,11 @@ public class AbstractGemFireIntegrationTests {
 		}
 
 		return regionList;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected <T extends ExpiringSession> T get(String sessionId) {
+		return (T) gemfireSessionRepository.getSession(sessionId);
 	}
 
 	protected <T extends ExpiringSession> T save(T session) {

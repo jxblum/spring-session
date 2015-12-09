@@ -72,7 +72,7 @@ import com.gemstone.gemfire.pdx.PdxWriter;
 @SuppressWarnings("unused")
 public class GemFireOperationsSessionRepositoryIntegrationTests extends AbstractGemFireIntegrationTests {
 
-	private static final int MAX_INACTIVE_INTERVAL_IN_SECONDS = 120;
+	private static final int MAX_INACTIVE_INTERVAL_IN_SECONDS = 300;
 
 	private static final String GEMFIRE_LOG_LEVEL = "warning";
 	private static final String SPRING_SESSION_GEMFIRE_REGION_NAME = "TestPartitionedSessions";
@@ -201,8 +201,10 @@ public class GemFireOperationsSessionRepositoryIntegrationTests extends Abstract
 			savedSession.getAttributeNames()), savedSession.getAttributeNames().containsAll(
 				expectedAttributeNames), is(true));
 
-		assertThat(Boolean.valueOf(String.valueOf(savedSession.getAttribute(expectedAttributeNames.get(0)))), is(equalTo(true)));
-		assertThat(Double.valueOf(String.valueOf(savedSession.getAttribute(expectedAttributeNames.get(1)))), is(equalTo(Math.PI)));
+		assertThat(Boolean.valueOf(String.valueOf(savedSession.getAttribute(expectedAttributeNames.get(0)))),
+			is(equalTo(true)));
+		assertThat(Double.valueOf(String.valueOf(savedSession.getAttribute(expectedAttributeNames.get(1)))),
+			is(equalTo(Math.PI)));
 		assertThat(String.valueOf(savedSession.getAttribute(expectedAttributeNames.get(2))), is(equalTo("test")));
 		assertThat((Person) savedSession.getAttribute(expectedAttributeNames.get(3)), is(equalTo(jonDoe)));
 	}

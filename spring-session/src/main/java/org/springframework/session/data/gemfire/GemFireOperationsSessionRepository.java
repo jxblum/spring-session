@@ -149,8 +149,9 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 	 *
 	 * @see org.springframework.session.ExpiringSession
 	 * @see com.gemstone.gemfire.pdx.PdxSerializable
+	 * @see java.lang.Comparable
 	 */
-	public static class GemFireSession implements ExpiringSession, PdxSerializable {
+	public static class GemFireSession implements Comparable<ExpiringSession>, ExpiringSession, PdxSerializable {
 
 		protected static final DateFormat TO_STRING_DATE_FORMAT = new SimpleDateFormat("YYYY-MM-dd-HH-mm-ss");
 
@@ -159,7 +160,7 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 		private long creationTime;
 		private volatile long lastAccessedTime;
 
-		private final Map<String, Object> sessionAttributes = new HashMap<String, Object>();
+		private transient final Map<String, Object> sessionAttributes = new HashMap<String, Object>();
 
 		private String id;
 
@@ -198,7 +199,7 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 		}
 
 		private String validateId(String id) {
-			Assert.hasText(id, "The Session ID must be specified");
+			Assert.hasText(id, "ID must be specified");
 			return id;
 		}
 
@@ -269,6 +270,7 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 			writer.writeLong("lastAccessedTime", getLastAccessedTime());
 			writer.writeInt("maxInactiveIntervalInSeconds", getMaxInactiveIntervalInSeconds());
 			writer.writeString("principalName", getPrincipalName());
+			writer.markIdentityField("id");
 
 			Set<String> attributeNames = new HashSet<String>(nullSafeSet(getAttributeNames()));
 
@@ -295,6 +297,11 @@ public class GemFireOperationsSessionRepository extends AbstractGemFireOperation
 
 		<T> Set<T> nullSafeSet(Set<T> set) {
 			return (set != null ? set : Collections.<T>emptySet());
+		}
+
+		@Override
+		public int compareTo(ExpiringSession session) {
+			return (Long.valueOf(getCreationTime()).compareTo(Long.valueOf(session.getCreationTime())));
 		}
 
 		@Override

@@ -192,16 +192,16 @@ public class GemFireOperationsSessionRepositoryTest {
 
 	@Test
 	public void createProperlyInitializedSession() {
-		final long beforeCreationTime = System.currentTimeMillis();
+		final long beforeOrAtCreationTime = System.currentTimeMillis();
 
 		ExpiringSession session = sessionRepository.createSession();
 
 		assertThat(session, is(instanceOf(GemFireSession.class)));
 		assertThat(session.getId(), is(notNullValue()));
 		assertThat(session.getAttributeNames().isEmpty(), is(true));
-		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeCreationTime)));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
+		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
+		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
 	}
 
 	@Test
@@ -386,10 +386,12 @@ public class GemFireOperationsSessionRepositoryTest {
 
 	@Test
 	public void constructGemFireSessionWithId() {
+		final long beforeOrAtCreationTime = System.currentTimeMillis();
+
 		GemFireSession session = new GemFireSession("1");
 
 		assertThat(session.getId(), is(equalTo("1")));
-		assertThat(session.getCreationTime(), is(lessThanOrEqualTo(System.currentTimeMillis())));
+		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
 		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(0)));
 		assertThat(session.getAttributeNames().isEmpty(), is(true));
@@ -433,11 +435,13 @@ public class GemFireOperationsSessionRepositoryTest {
 
 	@Test
 	public void createNewGemFireSession() {
+		final long beforeOrAtCreationTime = System.currentTimeMillis();
+
 		GemFireSession session = GemFireSession.create(120);
 
 		assertThat(session, is(notNullValue()));
 		assertThat(session.getId(), is(notNullValue()));
-		assertThat(session.getCreationTime(), is(lessThanOrEqualTo(System.currentTimeMillis())));
+		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
 		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(120)));
 		assertThat(session.getAttributeNames().isEmpty(), is(true));
@@ -531,9 +535,12 @@ public class GemFireOperationsSessionRepositoryTest {
 
 	@Test
 	public void isExpiredIsFalseWhenMaxInactiveIntervalIsNegative() {
+		final long beforeOrAtCreationTime = System.currentTimeMillis();
+
 		GemFireSession session = GemFireSession.create(-1);
 
 		assertThat(session, is(notNullValue()));
+		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
 		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(-1)));
 
@@ -590,6 +597,7 @@ public class GemFireOperationsSessionRepositoryTest {
 		verify(mockPdxWriter, times(1)).writeInt(eq("maxInactiveIntervalInSeconds"),
 			eq(session.getMaxInactiveIntervalInSeconds()));
 		verify(mockPdxWriter, times(1)).writeString(eq("principalName"), eq(session.getPrincipalName()));
+		verify(mockPdxWriter, times(1)).markIdentityField(eq("id"));
 		verify(mockPdxWriter, times(1)).writeObject(eq("attributeNames"), eq(session.getAttributeNames()));
 		verify(mockPdxWriter, times(1)).writeObject(eq("attrOne"), eq(session.getAttribute("attrOne")));
 		verify(mockPdxWriter, times(1)).writeObject(eq(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME),

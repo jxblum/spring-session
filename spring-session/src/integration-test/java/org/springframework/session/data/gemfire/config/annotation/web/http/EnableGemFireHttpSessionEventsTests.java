@@ -21,8 +21,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.number.OrderingComparison.greaterThan;
-import static org.hamcrest.number.OrderingComparison.lessThanOrEqualTo;
+import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 
 import java.util.Properties;
@@ -105,6 +104,8 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 
 	@Test
 	public void sessionCreatedEvent() {
+		final long beforeOrAtCreationTime = System.currentTimeMillis();
+
 		ExpiringSession expectedSession = save(createSession());
 
 		AbstractSessionEvent sessionEvent = sessionEventListener.getSessionEvent();
@@ -115,8 +116,7 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 
 		assertThat(createdSession, is(equalTo(expectedSession)));
 		assertThat(createdSession.getId(), is(notNullValue()));
-		assertThat(createdSession.getCreationTime(), is(greaterThan(0l)));
-		assertThat(createdSession.getCreationTime(), is(lessThanOrEqualTo(System.currentTimeMillis())));
+		assertThat(createdSession.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(createdSession.getLastAccessedTime(), is(equalTo(0l)));
 		assertThat(createdSession.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
 		assertThat(createdSession.isExpired(), is(true));

@@ -112,6 +112,11 @@ public class AbstractGemFireIntegrationTests {
 		return regionList;
 	}
 
+	protected <T extends ExpiringSession> T expire(T session) {
+		session.setLastAccessedTime(0l);
+		return session;
+	}
+
 	@SuppressWarnings("unchecked")
 	protected <T extends ExpiringSession> T get(String sessionId) {
 		return (T) gemfireSessionRepository.getSession(sessionId);

@@ -117,9 +117,9 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 		assertThat(createdSession, is(equalTo(expectedSession)));
 		assertThat(createdSession.getId(), is(notNullValue()));
 		assertThat(createdSession.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
-		assertThat(createdSession.getLastAccessedTime(), is(equalTo(0l)));
+		assertThat(createdSession.getLastAccessedTime(), is(equalTo(createdSession.getCreationTime())));
 		assertThat(createdSession.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
-		assertThat(createdSession.isExpired(), is(true));
+		assertThat(createdSession.isExpired(), is(false));
 	}
 
 	@Test
@@ -136,7 +136,7 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 
 	@Test
 	public void getExistingExpiredSession() {
-		ExpiringSession expectedSession = save(createSession());
+		ExpiringSession expectedSession = save(expire(createSession()));
 
 		AbstractSessionEvent sessionEvent = sessionEventListener.getSessionEvent();
 

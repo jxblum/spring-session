@@ -24,7 +24,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -33,7 +32,6 @@ import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,9 +39,7 @@ import static org.springframework.session.data.gemfire.GemFireOperationsSessionR
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -59,15 +55,12 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.gemfire.GemfireAccessor;
 import org.springframework.data.gemfire.GemfireOperations;
 import org.springframework.session.ExpiringSession;
-import org.springframework.session.Session;
 import org.springframework.session.events.AbstractSessionEvent;
 import org.springframework.session.events.SessionDeletedEvent;
 
 import com.gemstone.gemfire.cache.AttributesMutator;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.query.SelectResults;
-import com.gemstone.gemfire.pdx.PdxReader;
-import com.gemstone.gemfire.pdx.PdxWriter;
 
 /**
  * The GemFireOperationsSessionRepositoryTest class is a test suite of test cases testing the contract and functionality
@@ -122,12 +115,6 @@ public class GemFireOperationsSessionRepositoryTest {
 		verify(mockAttributesMutator, times(1)).addCacheListener(same(sessionRepository));
 		verify(mockRegion, times(1)).getFullPath();
 		verify(mockTemplate, times(1)).getRegion();
-	}
-
-	protected <E> Set<E> asSet(E... elements) {
-		Set<E> set = new HashSet<E>(elements.length);
-		Collections.addAll(set, elements);
-		return set;
 	}
 
 	@Test
@@ -200,7 +187,7 @@ public class GemFireOperationsSessionRepositoryTest {
 		assertThat(session.getId(), is(notNullValue()));
 		assertThat(session.getAttributeNames().isEmpty(), is(true));
 		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
-		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
+		assertThat(session.getLastAccessedTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
 	}
 
@@ -382,302 +369,6 @@ public class GemFireOperationsSessionRepositoryTest {
 
 		verify(mockTemplate, times(1)).remove(eq(expectedSessionId));
 		verify(mockApplicationEventPublisher, times(1)).publishEvent(isA(SessionDeletedEvent.class));
-	}
-
-	@Test
-	public void constructGemFireSessionWithId() {
-		final long beforeOrAtCreationTime = System.currentTimeMillis();
-
-		GemFireSession session = new GemFireSession("1");
-
-		assertThat(session.getId(), is(equalTo("1")));
-		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
-		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(0)));
-		assertThat(session.getAttributeNames().isEmpty(), is(true));
-	}
-
-	@Test
-	public void constructGemFireSessionWithExistingSession() {
-		ExpiringSession mockSession = mock(ExpiringSession.class);
-
-		final long expectedCreationTime = System.currentTimeMillis();
-		final long expectedLastAccessTime = (expectedCreationTime + TimeUnit.SECONDS.toMillis(30));
-
-		Set<String> expectedAttributedNames = asSet("attrOne", "attrTwo");
-
-		when(mockSession.getId()).thenReturn("2");
-		when(mockSession.getCreationTime()).thenReturn(expectedCreationTime);
-		when(mockSession.getLastAccessedTime()).thenReturn(expectedLastAccessTime);
-		when(mockSession.getMaxInactiveIntervalInSeconds()).thenReturn(MAX_INACTIVE_INTERVAL_IN_SECONDS);
-		when(mockSession.getAttributeNames()).thenReturn(expectedAttributedNames);
-		when(mockSession.getAttribute(eq("attrOne"))).thenReturn("testOne");
-		when(mockSession.getAttribute(eq("attrTwo"))).thenReturn("testTwo");
-
-		GemFireSession gemFireSession = new GemFireSession(mockSession);
-
-		assertThat(gemFireSession.getId(), is(equalTo("2")));
-		assertThat(gemFireSession.getCreationTime(), is(equalTo(expectedCreationTime)));
-		assertThat(gemFireSession.getLastAccessedTime(), is(equalTo(expectedLastAccessTime)));
-		assertThat(gemFireSession.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
-		assertThat(gemFireSession.getAttributeNames(), is(equalTo(expectedAttributedNames)));
-		assertThat(String.valueOf(gemFireSession.getAttribute("attrOne")), is(equalTo("testOne")));
-		assertThat(String.valueOf(gemFireSession.getAttribute("attrTwo")), is(equalTo("testTwo")));
-
-		verify(mockSession, times(1)).getId();
-		verify(mockSession, times(1)).getCreationTime();
-		verify(mockSession, times(1)).getLastAccessedTime();
-		verify(mockSession, times(1)).getMaxInactiveIntervalInSeconds();
-		verify(mockSession, times(1)).getAttributeNames();
-		verify(mockSession, times(1)).getAttribute(eq("attrOne"));
-		verify(mockSession, times(1)).getAttribute(eq("attrTwo"));
-	}
-
-	@Test
-	public void createNewGemFireSession() {
-		final long beforeOrAtCreationTime = System.currentTimeMillis();
-
-		GemFireSession session = GemFireSession.create(120);
-
-		assertThat(session, is(notNullValue()));
-		assertThat(session.getId(), is(notNullValue()));
-		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
-		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(120)));
-		assertThat(session.getAttributeNames().isEmpty(), is(true));
-	}
-
-	@Test
-	public void fromExistingSession() {
-		ExpiringSession mockSession = mock(ExpiringSession.class);
-
-		final long expectedCreationTime = System.currentTimeMillis();
-		final long expectedLastAccessTime = (expectedCreationTime + TimeUnit.SECONDS.toMillis(30));
-
-		when(mockSession.getId()).thenReturn("4");
-		when(mockSession.getCreationTime()).thenReturn(expectedCreationTime);
-		when(mockSession.getLastAccessedTime()).thenReturn(expectedLastAccessTime);
-		when(mockSession.getMaxInactiveIntervalInSeconds()).thenReturn(MAX_INACTIVE_INTERVAL_IN_SECONDS);
-		when(mockSession.getAttributeNames()).thenReturn(Collections.<String>emptySet());
-
-		GemFireSession gemFireSession = GemFireSession.from(mockSession);
-
-		assertThat(gemFireSession.getId(), is(equalTo("4")));
-		assertThat(gemFireSession.getCreationTime(), is(equalTo(expectedCreationTime)));
-		assertThat(gemFireSession.getLastAccessedTime(), is(not(equalTo(expectedLastAccessTime))));
-		assertThat(gemFireSession.getLastAccessedTime(), is(lessThanOrEqualTo(System.currentTimeMillis())));
-		assertThat(gemFireSession.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
-		assertThat(gemFireSession.getAttributeNames().isEmpty(), is(true));
-
-		verify(mockSession, times(1)).getId();
-		verify(mockSession, times(1)).getCreationTime();
-		verify(mockSession, times(1)).getLastAccessedTime();
-		verify(mockSession, times(1)).getMaxInactiveIntervalInSeconds();
-		verify(mockSession, times(1)).getAttributeNames();
-		verify(mockSession, never()).getAttribute(anyString());
-	}
-
-	@Test
-	public void setGetAndRemoveAttribute() {
-		GemFireSession session = GemFireSession.create(60);
-
-		assertThat(session, is(notNullValue()));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(60)));
-		assertThat(session.getAttributeNames().isEmpty(), is(true));
-
-		session.setAttribute("attrOne", "testOne");
-
-		assertThat(session.getAttributeNames(), is(equalTo(asSet("attrOne"))));
-		assertThat(String.valueOf(session.getAttribute("attrOne")), is(equalTo("testOne")));
-		assertThat(session.getAttribute("attrTwo"), is(nullValue()));
-
-		session.setAttribute("attrTwo", "testTwo");
-
-		assertThat(session.getAttributeNames(), is(equalTo(asSet("attrOne", "attrTwo"))));
-		assertThat(String.valueOf(session.getAttribute("attrOne")), is(equalTo("testOne")));
-		assertThat(String.valueOf(session.getAttribute("attrTwo")), is(equalTo("testTwo")));
-
-		session.setAttribute("attrTwo", null);
-
-		assertThat(session.getAttributeNames(), is(equalTo(asSet("attrOne"))));
-		assertThat(String.valueOf(session.getAttribute("attrOne")), is(equalTo("testOne")));
-		assertThat(session.getAttribute("attrTwo"), is(nullValue()));
-
-		session.removeAttribute("attrOne");
-
-		assertThat(session.getAttributeNames().isEmpty(), is(true));
-		assertThat(session.getAttribute("attrOne"), is(nullValue()));
-		assertThat(session.getAttribute("attrTwo"), is(nullValue()));
-	}
-
-	@Test
-	public void setAndGetPrincipalName() {
-		GemFireSession session = GemFireSession.create(0);
-
-		assertThat(session, is(notNullValue()));
-		assertThat(session.getPrincipalName(), is(nullValue()));
-
-		session.setPrincipalName("jblum");
-
-		assertThat(session.getPrincipalName(), is(equalTo("jblum")));
-		assertThat(session.getAttributeNames(), is(equalTo(asSet(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME))));
-		assertThat(String.valueOf(session.getAttribute(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME)), is(equalTo("jblum")));
-
-		session.setAttribute(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME, "rwinch");
-
-		assertThat(session.getPrincipalName(), is(equalTo("rwinch")));
-		assertThat(String.valueOf(session.getAttribute(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME)), is(equalTo("rwinch")));
-
-		session.removeAttribute(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME);
-
-		assertThat(session.getPrincipalName(), is(nullValue()));
-	}
-
-	@Test
-	public void isExpiredIsFalseWhenMaxInactiveIntervalIsNegative() {
-		final long beforeOrAtCreationTime = System.currentTimeMillis();
-
-		GemFireSession session = GemFireSession.create(-1);
-
-		assertThat(session, is(notNullValue()));
-		assertThat(session.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
-		assertThat(session.getLastAccessedTime(), is(equalTo(0l)));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(-1)));
-
-		assertThat(session.isExpired(), is(false));
-	}
-
-	@Test
-	// NOTE the following test case has a race condition, but is highly unlikely
-	public void isExpiredIsFalseWhenSessionIsActive() {
-		final int maxInactiveIntervalInSeconds = (int) TimeUnit.HOURS.toSeconds(2);
-
-		GemFireSession session = GemFireSession.create(maxInactiveIntervalInSeconds);
-
-		assertThat(session, is(notNullValue()));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(maxInactiveIntervalInSeconds)));
-
-		session.setLastAccessedTime(System.currentTimeMillis());
-
-		assertThat(session.isExpired(), is(false));
-	}
-
-	@Test
-	// NOTE the following test case has a race condition, but is highly unlikely
-	public void isExpiredIsTrueWhenSessionIsInactive() {
-		GemFireSession session = GemFireSession.create(60);
-
-		assertThat(session, is(notNullValue()));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(60)));
-
-		final long lastAccessedTwoHoursAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2);
-
-		session.setLastAccessedTime(lastAccessedTwoHoursAgo);
-
-		assertThat(session.isExpired(), is(true));
-		assertThat(session.getLastAccessedTime(), is(equalTo(lastAccessedTwoHoursAgo)));
-	}
-
-	@Test
-	public void toData() {
-		GemFireSession session = new GemFireSession("1");
-
-		session.setLastAccessedTime(123l);
-		session.setMaxInactiveIntervalInSeconds(MAX_INACTIVE_INTERVAL_IN_SECONDS);
-		session.setPrincipalName("jblum");
-		session.setAttribute("attrOne", "testOne");
-
-		PdxWriter mockPdxWriter = mock(PdxWriter.class);
-
-		session.toData(mockPdxWriter);
-
-		verify(mockPdxWriter, times(1)).writeString(eq("id"), eq("1"));
-		verify(mockPdxWriter, times(1)).writeLong(eq("creationTime"), eq(session.getCreationTime()));
-		verify(mockPdxWriter, times(1)).writeLong(eq("lastAccessedTime"), eq(session.getLastAccessedTime()));
-		verify(mockPdxWriter, times(1)).writeInt(eq("maxInactiveIntervalInSeconds"),
-			eq(session.getMaxInactiveIntervalInSeconds()));
-		verify(mockPdxWriter, times(1)).writeString(eq("principalName"), eq(session.getPrincipalName()));
-		verify(mockPdxWriter, times(1)).markIdentityField(eq("id"));
-		verify(mockPdxWriter, times(1)).writeObject(eq("attributeNames"), eq(session.getAttributeNames()));
-		verify(mockPdxWriter, times(1)).writeObject(eq("attrOne"), eq(session.getAttribute("attrOne")));
-		verify(mockPdxWriter, times(1)).writeObject(eq(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME),
-			eq(session.getPrincipalName()));
-	}
-
-	@Test
-	public void fromData() {
-		final long expectedCreationTime = (System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2));
-		final long expectedLastAccessedTime = (expectedCreationTime + TimeUnit.MINUTES.toMillis(30));
-
-		final int expectedMaxInactiveIntervalInSeconds = (int) TimeUnit.HOURS.toSeconds(6);
-
-		Set<String> expectedAttributeNames = asSet("attrOne", "attrTwo");
-
-		PdxReader mockPdxReader = mock(PdxReader.class);
-
-		when(mockPdxReader.readString(eq("id"))).thenReturn("2");
-		when(mockPdxReader.readLong(eq("creationTime"))).thenReturn(expectedCreationTime);
-		when(mockPdxReader.readLong(eq("lastAccessedTime"))).thenReturn(expectedLastAccessedTime);
-		when(mockPdxReader.readInt(eq("maxInactiveIntervalInSeconds"))).thenReturn(expectedMaxInactiveIntervalInSeconds);
-		when(mockPdxReader.readString("principalName")).thenReturn("jblum");
-		when(mockPdxReader.readObject("attributeNames")).thenReturn(expectedAttributeNames);
-		when(mockPdxReader.readObject("attrOne")).thenReturn("testOne");
-		when(mockPdxReader.readObject("attrTwo")).thenReturn("testTwo");
-
-		GemFireSession session = new GemFireSession("1");
-
-		session.fromData(mockPdxReader);
-
-		assertThat(session.getId(), is(equalTo("2")));
-		assertThat(session.getCreationTime(), is(equalTo(expectedCreationTime)));
-		assertThat(session.getLastAccessedTime(), is(equalTo(expectedLastAccessedTime)));
-		assertThat(session.getMaxInactiveIntervalInSeconds(), is(equalTo(expectedMaxInactiveIntervalInSeconds)));
-		assertThat(session.getPrincipalName(), is(equalTo("jblum")));
-		assertThat(session.getAttributeNames().size(), is(equalTo(expectedAttributeNames.size() + 1)));
-		assertThat(session.getAttributeNames().containsAll(expectedAttributeNames), is(true));
-		assertThat(String.valueOf(session.getAttribute("attrOne")), is(equalTo("testOne")));
-		assertThat(String.valueOf(session.getAttribute("attrTwo")), is(equalTo("testTwo")));
-		assertThat(String.valueOf(session.getAttribute(Session.PRINCIPAL_NAME_ATTRIBUTE_NAME)), is(equalTo("jblum")));
-
-		verify(mockPdxReader, times(1)).readString(eq("id"));
-		verify(mockPdxReader, times(1)).readLong(eq("creationTime"));
-		verify(mockPdxReader, times(1)).readLong(eq("lastAccessedTime"));
-		verify(mockPdxReader, times(1)).readInt(eq("maxInactiveIntervalInSeconds"));
-		verify(mockPdxReader, times(1)).readString(eq("principalName"));
-		verify(mockPdxReader, times(1)).readObject(eq("attributeNames"));
-
-		for (String expectedAttributeName : expectedAttributeNames) {
-			verify(mockPdxReader, times(1)).readObject(eq(expectedAttributeName));
-		}
-	}
-
-	@Test
-	public void sessionEqualsDifferentSessionBasedOnId() {
-		GemFireSession sessionOne = new GemFireSession("1");
-
-		sessionOne.setLastAccessedTime(123l);
-		sessionOne.setMaxInactiveIntervalInSeconds(120);
-		sessionOne.setPrincipalName("jblum");
-
-		GemFireSession sessionTwo = new GemFireSession("1");
-
-		sessionTwo.setLastAccessedTime(456l);
-		sessionTwo.setMaxInactiveIntervalInSeconds(300);
-		sessionTwo.setPrincipalName("rwinch");
-
-		assertThat(sessionOne.getId().equals(sessionTwo.getId()), is(true));
-		assertThat(sessionOne.getLastAccessedTime() == sessionTwo.getLastAccessedTime(), is(false));
-		assertThat(sessionOne.getMaxInactiveIntervalInSeconds() == sessionTwo.getMaxInactiveIntervalInSeconds(), is(false));
-		assertThat(sessionOne.getPrincipalName().equals(sessionTwo.getPrincipalName()), is(false));
-		assertThat(sessionOne.equals(sessionTwo), is(true));
-	}
-
-	@Test
-	public void sessionHashCodeIsNotEqualToStringHashCode() {
-		GemFireSession session = new GemFireSession("1");
-
-		assertThat(session.getId(), is(equalTo("1")));
-		assertThat(session.hashCode(), is(not(equalTo("1".hashCode()))));
 	}
 
 	protected abstract class GemfireOperationsAccessor extends GemfireAccessor implements GemfireOperations {

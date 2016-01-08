@@ -33,7 +33,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.gemfire.CacheFactoryBean;
 import org.springframework.session.ExpiringSession;
@@ -253,47 +252,6 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 		SessionEventListener sessionEventListener() {
 			return new SessionEventListener();
 		}
-	}
-
-	static class SessionEventListener implements ApplicationListener<AbstractSessionEvent> {
-
-		private AbstractSessionEvent sessionEvent;
-
-		private final Object lock = new Object();
-
-		@SuppressWarnings("unchecked")
-		public synchronized <T extends AbstractSessionEvent> T getSessionEvent() {
-			T localSessionEvent = (T) sessionEvent;
-			sessionEvent = null;
-			return localSessionEvent;
-		}
-
-		public synchronized void onApplicationEvent(AbstractSessionEvent event) {
-			sessionEvent = event;
-		}
-
-		protected <T extends AbstractSessionEvent> T waitForSessionEvent(long duration) {
-			final long timeout = (System.currentTimeMillis() + duration);
-
-			T sessionEvent = getSessionEvent();
-
-			while (sessionEvent == null && System.currentTimeMillis() < timeout) {
-				try {
-					synchronized (lock) {
-						TimeUnit.MILLISECONDS.timedWait(lock, duration);
-					}
-				}
-				catch (InterruptedException ignore) {
-				}
-				finally {
-					sessionEvent = getSessionEvent();
-					duration = (timeout - System.currentTimeMillis());
-				}
-			}
-
-			return sessionEvent;
-		}
-
 	}
 
 }

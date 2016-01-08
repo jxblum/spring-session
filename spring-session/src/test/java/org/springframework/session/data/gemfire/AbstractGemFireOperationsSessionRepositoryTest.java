@@ -44,8 +44,12 @@ import static org.mockito.Mockito.when;
 import static org.springframework.session.data.gemfire.AbstractGemFireOperationsSessionRepository.GemFireSession;
 import static org.springframework.session.data.gemfire.AbstractGemFireOperationsSessionRepository.GemFireSessionAttributes;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,12 +93,19 @@ import edu.umd.cs.mtc.TestFramework;
  * and functionality of the AbstractGemFireOperationsSessionRepository class.
  *
  * @author John Blum
+ * @see org.junit.Rule
  * @see org.junit.Test
+ * @see org.junit.rules.ExpectedException
  * @see org.junit.runner.RunWith
  * @see org.mockito.Mock
  * @see org.mockito.Mockito
  * @see org.mockito.runners.MockitoJUnitRunner
+ * @see org.springframework.data.gemfire.GemfireOperations
+ * @see org.springframework.session.ExpiringSession
+ * @see org.springframework.session.Session
  * @see org.springframework.session.data.gemfire.AbstractGemFireOperationsSessionRepository
+ * @see edu.umd.cs.mtc.MultithreadedTestCase
+ * @see edu.umd.cs.mtc.TestFramework
  * @since 1.1.0
  */
 @RunWith(MockitoJUnitRunner.class)
@@ -798,6 +809,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 		verify(mockDataOutput, times(1)).writeLong(eq(session.getCreationTime()));
 		verify(mockDataOutput, times(1)).writeLong(eq(session.getLastAccessedTime()));
 		verify(mockDataOutput, times(1)).writeInt(eq(session.getMaxInactiveIntervalInSeconds()));
+		verify(mockDataOutput, times(1)).writeInt(eq("jblum".length()));
 		verify(mockDataOutput, times(1)).writeUTF(eq(session.getPrincipalName()));
 	}
 
@@ -848,7 +860,47 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 
 		verify(mockDataInput, times(2)).readUTF();
 		verify(mockDataInput, times(2)).readLong();
-		verify(mockDataInput, times(1)).readInt();
+		verify(mockDataInput, times(2)).readInt();
+	}
+
+	@Test
+	public void sessionToDataThenFromDataWhenPrincipalNameIsNullGetsHandledProperly()
+			throws ClassNotFoundException, IOException {
+
+		final long beforeOrAtCreationTime = System.currentTimeMillis();
+
+		GemFireSession expectedSession = new GemFireSession("123") {
+			@Override void writeObject(Object obj, DataOutput out) throws IOException {
+				assertThat(obj, is(instanceOf(GemFireSessionAttributes.class)));
+				assertThat(out, is(notNullValue()));
+			}
+		};
+
+		assertThat(expectedSession.getId(), is(equalTo("123")));
+		assertThat(expectedSession.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
+		assertThat(expectedSession.getLastAccessedTime(), is(greaterThanOrEqualTo(expectedSession.getCreationTime())));
+		assertThat(expectedSession.getMaxInactiveIntervalInSeconds(), is(equalTo(0)));
+		assertThat(expectedSession.getPrincipalName(), is(nullValue()));
+
+		ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+
+		expectedSession.toData(new DataOutputStream(outBytes));
+
+		GemFireSession deserializedSession = new GemFireSession("0") {
+			@SuppressWarnings("unchecked")
+			@Override <T> T readObject(DataInput in) throws ClassNotFoundException, IOException {
+				return (T) new GemFireSessionAttributes();
+			}
+		};
+
+		deserializedSession.fromData(new DataInputStream(new ByteArrayInputStream(outBytes.toByteArray())));
+
+		assertThat(deserializedSession, is(equalTo(expectedSession)));
+		assertThat(deserializedSession.getCreationTime(), is(equalTo(expectedSession.getCreationTime())));
+		assertThat(deserializedSession.getLastAccessedTime(), is(equalTo(expectedSession.getLastAccessedTime())));
+		assertThat(deserializedSession.getMaxInactiveIntervalInSeconds(),
+			is(equalTo(expectedSession.getMaxInactiveIntervalInSeconds())));
+		assertThat(deserializedSession.getPrincipalName(), is(nullValue()));
 	}
 
 	@Test
@@ -1285,6 +1337,7 @@ public class AbstractGemFireOperationsSessionRepositoryTest {
 			assertThat(session.getPrincipalName(), is(equalTo("ogierke")));
 			assertThat(session.getAttributeNames().size(), is(equalTo(3)));
 			assertThat(session.getAttributeNames().containsAll(asSet("tennis", "greeting")), is(true));
+			assertThat(session.getAttributeNames().contains("junk"), is(false));
 			assertThat(session.getAttribute("junk"), is(nullValue()));
 			assertThat(String.valueOf(session.getAttribute("tennis")), is(equalTo("pong")));
 			assertThat(String.valueOf(session.getAttribute("greeting")), is(equalTo("hello")));

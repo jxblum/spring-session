@@ -47,6 +47,7 @@ import org.springframework.session.events.SessionDeletedEvent;
 import org.springframework.session.events.SessionDestroyedEvent;
 import org.springframework.session.events.SessionExpiredEvent;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import com.gemstone.gemfire.DataSerializable;
 import com.gemstone.gemfire.DataSerializer;
@@ -67,6 +68,7 @@ import com.gemstone.gemfire.cache.util.CacheListenerAdapter;
  * @see org.springframework.data.gemfire.GemfireOperations
  * @see org.springframework.session.ExpiringSession
  * @see org.springframework.session.FindByPrincipalNameSessionRepository
+ * @see org.springframework.session.Session
  * @see org.springframework.session.data.gemfire.config.annotation.web.http.GemFireHttpSessionConfiguration
  * @see com.gemstone.gemfire.cache.Region
  * @see com.gemstone.gemfire.cache.util.CacheListenerAdapter
@@ -304,11 +306,12 @@ public abstract class AbstractGemFireOperationsSessionRepository extends CacheLi
 	 * Session state information in GemFire.  This class implements GemFire's {@link DataSerializable} interface
 	 * to better handle replication of Session information across the GemFire cluster.
 	 *
+	 * @see java.lang.Comparable
 	 * @see org.springframework.session.ExpiringSession
+	 * @see org.springframework.session.data.gemfire.AbstractGemFireOperationsSessionRepository.GemFireSessionAttributes
 	 * @see com.gemstone.gemfire.DataSerializable
 	 * @see com.gemstone.gemfire.Delta
 	 * @see com.gemstone.gemfire.Instantiator
-	 * @see java.lang.Comparable
 	 */
 	public static class GemFireSession implements Comparable<ExpiringSession>, DataSerializable, Delta, ExpiringSession {
 
@@ -466,8 +469,18 @@ public abstract class AbstractGemFireOperationsSessionRepository extends CacheLi
 			out.writeLong(getCreationTime());
 			out.writeLong(getLastAccessedTime());
 			out.writeInt(getMaxInactiveIntervalInSeconds());
-			out.writeUTF(getPrincipalName());
+
+			String principalName = getPrincipalName();
+			int length = (StringUtils.hasText(principalName) ? principalName.length() : 0);
+
+			out.writeInt(length);
+
+			if (length > 0) {
+				out.writeUTF(principalName);
+			}
+
 			writeObject(sessionAttributes, out);
+
 			this.delta = false;
 		}
 
@@ -483,8 +496,15 @@ public abstract class AbstractGemFireOperationsSessionRepository extends CacheLi
 			creationTime = in.readLong();
 			setLastAccessedTime(in.readLong());
 			setMaxInactiveIntervalInSeconds(in.readInt());
-			setPrincipalName(in.readUTF());
+
+			int principalNameLength = in.readInt();
+
+			if (principalNameLength > 0) {
+				setPrincipalName(in.readUTF());
+			}
+
 			sessionAttributes.from(this.<GemFireSessionAttributes>readObject(in));
+
 			this.delta = false;
 		}
 

@@ -26,6 +26,7 @@ import static org.junit.Assert.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -66,7 +67,9 @@ import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.DataPolicy;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionAttributes;
+import com.gemstone.gemfire.cache.client.ClientCache;
 import com.gemstone.gemfire.cache.client.Pool;
+import com.gemstone.gemfire.cache.server.CacheServer;
 
 /**
  * The ClientServerGemFireOperationsSessionRepositoryIntegrationTests class is a test suite of test cases testing
@@ -118,19 +121,22 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 		processWorkingDirectory = createDirectory(processWorkingDirectoryPathname);
 		gemfireServer = run(SpringSessionGemFireServerConfiguration.class, processWorkingDirectory);
 
-		waitForProcessToStart(gemfireServer, processWorkingDirectory);
+		assertThat(waitForProcessToStart(gemfireServer, processWorkingDirectory), is(true));
 
-		System.err.printf("GemFire Server startup time [%1$d ms]%n", System.currentTimeMillis() - t0);
+		System.err.printf("GemFire Server [startup time = %1$d ms]%n", System.currentTimeMillis() - t0);
 	}
 
 	@AfterClass
 	public static void stopGemFireServerAndCleanupArtifacts() {
 		if (gemfireServer != null) {
 			gemfireServer.destroyForcibly();
+			System.err.printf("GemFire Server [exit value = %1$d]%n",
+				waitForProcessToStop(gemfireServer, processWorkingDirectory));
 		}
 
 		FileSystemUtils.deleteRecursively(processWorkingDirectory);
-		waitForClientCacheToClose(TimeUnit.SECONDS.toMillis(5));
+
+		assertThat(waitForClientCacheToClose(TimeUnit.SECONDS.toMillis(5)), is(true));
 	}
 
 	@Before
@@ -266,6 +272,7 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 //				}
 //			};
 
+			clientCacheFactory.setClose(true);
 			clientCacheFactory.setProperties(gemfireProperties());
 			clientCacheFactory.setPool(gemfirePool);
 			clientCacheFactory.setUseBeanFactoryLocator(false);
@@ -276,6 +283,21 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 		@Bean
 		public SessionEventListener sessionEventListener() {
 			return new SessionEventListener();
+		}
+
+		// used for debugging purposes
+		public static void main(final String[] args) {
+			ConfigurableApplicationContext applicationContext = new AnnotationConfigApplicationContext(
+				SpringSessionGemFireClientConfiguration.class);
+
+			applicationContext.registerShutdownHook();
+
+			ClientCache clientCache = applicationContext.getBean(ClientCache.class);
+
+			for (InetSocketAddress server : clientCache.getCurrentServers()) {
+				System.err.printf("GemFire Server [host: %1$s, port: %2$d]%n",
+					server.getHostName(), server.getPort());
+			}
 		}
 	}
 
@@ -322,6 +344,14 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 				SpringSessionGemFireServerConfiguration.class);
 
 			applicationContext.registerShutdownHook();
+
+			final CacheServer gemfireCacheServer = applicationContext.getBean(CacheServer.class);
+
+			assertThat(waitOnCondition(new Condition() {
+				@Override public boolean evaluate() {
+					return gemfireCacheServer.isRunning();
+				}
+			}), is(true));
 
 			writeProcessControlFile(WORKING_DIRECTORY);
 		}

@@ -54,7 +54,9 @@ import com.gemstone.gemfire.cache.client.ClientCacheFactory;
  * @see org.springframework.session.ExpiringSession
  * @see org.springframework.session.events.AbstractSessionEvent
  * @see com.gemstone.gemfire.cache.Cache
+ * @see com.gemstone.gemfire.cache.DataPolicy
  * @see com.gemstone.gemfire.cache.GemFireCache
+ * @see com.gemstone.gemfire.cache.ExpirationAttributes
  * @see com.gemstone.gemfire.cache.Region
  * @see com.gemstone.gemfire.cache.client.ClientCache
  * @since 1.1.0
@@ -126,57 +128,95 @@ public class AbstractGemFireIntegrationTests {
 	// NOTE this method would not be necessary except Spring Sessions' build does not fork the test JVM
 	// for every test class.
 	/* (non-Javadoc) */
-	protected static void waitForClientCacheToClose(long duration) {
-		ClientCache clientCache = null;
-
-		try {
-			clientCache = ClientCacheFactory.getAnyInstance();
-			clientCache.close();
-
-			long timeout = (System.currentTimeMillis() + duration);
-
-			while (!clientCache.isClosed() && System.currentTimeMillis() < timeout) {
-				try {
-					synchronized (ClientCacheFactory.class) {
-						TimeUnit.MILLISECONDS.timedWait(ClientCacheFactory.class, DEFAULT_WAIT_INTERVAL);
-					}
-				}
-				catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-					break;
-				}
-			}
-		}
-		catch (CacheClosedException ignore) {
-		}
-		finally {
-			System.err.printf("GemFire ClientCache closed [%1$s]%n", (clientCache == null || clientCache.isClosed()));
-		}
+	protected static boolean waitForClientCacheToClose() {
+		return waitForClientCacheToClose(DEFAULT_WAIT_DURATION);
 	}
 
 	/* (non-Javadoc) */
-	protected static void waitForProcessToStart(Process process, File directory) {
-		waitForProcessToStart(process, directory, DEFAULT_WAIT_DURATION);
+	protected static boolean waitForClientCacheToClose(long duration) {
+		try {
+			final ClientCache clientCache = ClientCacheFactory.getAnyInstance();
+
+			clientCache.close();
+
+			waitOnCondition(new Condition() {
+				@Override public boolean evaluate() {
+					return clientCache.isClosed();
+				}
+			}, duration);
+
+			return clientCache.isClosed();
+		}
+		catch (CacheClosedException ignore) {
+			return true;
+		}
+
+	}
+
+	/* (non-Javadoc) */
+	protected static boolean waitForProcessToStart(Process process, File directory) {
+		return waitForProcessToStart(process, directory, DEFAULT_WAIT_DURATION);
 	}
 
 	/* (non-Javadoc) */
 	@SuppressWarnings("all")
-	protected static void waitForProcessToStart(Process process, File directory, long duration) {
-		File processControlFile = new File(directory, DEFAULT_PROCESS_CONTROL_FILENAME);
+	protected static boolean waitForProcessToStart(Process process, File directory, long duration) {
+		final File processControl = new File(directory, DEFAULT_PROCESS_CONTROL_FILENAME);
 
+		waitOnCondition(new Condition() {
+			@Override public boolean evaluate() {
+				return processControl.isFile();
+			}
+		}, duration);
+
+		return process.isAlive();
+	}
+
+	/* (non-Javadoc) */
+	protected static int waitForProcessToStop(Process process, File directory) {
+		return waitForProcessToStop(process, directory, DEFAULT_WAIT_DURATION);
+	}
+
+	/* (non-Javadoc) */
+	protected static int waitForProcessToStop(Process process, File directory, long duration) {
 		final long timeout = (System.currentTimeMillis() + duration);
 
-		while (!processControlFile.isFile() && System.currentTimeMillis() < timeout) {
-			try {
-				synchronized (processControlFile) {
-					TimeUnit.MILLISECONDS.timedWait(processControlFile, DEFAULT_WAIT_INTERVAL);
+		try {
+			while (process.isAlive() && System.currentTimeMillis() < timeout) {
+				if (process.waitFor(DEFAULT_WAIT_INTERVAL, TimeUnit.MILLISECONDS)) {
+					return process.exitValue();
 				}
 			}
-			catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				break;
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+
+		return (process.isAlive() ? -1 : process.exitValue());
+	}
+
+	/* (non-Javadoc) */
+	protected static boolean waitOnCondition(Condition condition) {
+		return waitOnCondition(condition, DEFAULT_WAIT_DURATION);
+	}
+
+	/* (non-Javadoc) */
+	@SuppressWarnings("all")
+	protected static boolean waitOnCondition(Condition condition, long duration) {
+		final long timeout = (System.currentTimeMillis() + duration);
+
+		try {
+			while (!condition.evaluate() && System.currentTimeMillis() < timeout) {
+				synchronized (condition) {
+					TimeUnit.MILLISECONDS.timedWait(condition, DEFAULT_WAIT_INTERVAL);
+				}
 			}
 		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+
+		return condition.evaluate();
 	}
 
 	/* (non-Javadoc) */
@@ -285,6 +325,7 @@ public class AbstractGemFireIntegrationTests {
 
 		private final Object lock = new Object();
 
+		/* (non-Javadoc) */
 		@SuppressWarnings("unchecked")
 		public synchronized <T extends AbstractSessionEvent> T getSessionEvent() {
 			T sessionEvent = (T) this.sessionEvent;
@@ -292,33 +333,40 @@ public class AbstractGemFireIntegrationTests {
 			return sessionEvent;
 		}
 
+		/* (non-Javadoc) */
 		public synchronized void onApplicationEvent(AbstractSessionEvent event) {
 			sessionEvent = event;
 		}
 
+		/* (non-Javadoc) */
 		public <T extends AbstractSessionEvent> T waitForSessionEvent(long duration) {
 			final long timeout = (System.currentTimeMillis() + duration);
 
 			T sessionEvent = getSessionEvent();
 
-			while (sessionEvent == null && System.currentTimeMillis() < timeout) {
-				try {
+			try {
+				while (sessionEvent == null && System.currentTimeMillis() < timeout) {
 					synchronized (lock) {
 						TimeUnit.MILLISECONDS.timedWait(lock, DEFAULT_WAIT_INTERVAL);
 					}
-				}
-				catch (InterruptedException ignore) {
-					Thread.currentThread().interrupt();
-					break;
-				}
-				finally {
+
 					sessionEvent = getSessionEvent();
 				}
+			}
+			catch (InterruptedException ignore) {
+				Thread.currentThread().interrupt();
 			}
 
 			return sessionEvent;
 		}
 
+	}
+
+	/**
+	 * The Condition interface defines a logical condition that must be satisfied before it is safe to proceed.
+	 */
+	protected interface Condition {
+		boolean evaluate();
 	}
 
 }

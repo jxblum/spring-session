@@ -37,6 +37,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.gemfire.CacheFactoryBean;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.data.gemfire.AbstractGemFireIntegrationTests;
+import org.springframework.session.data.gemfire.support.GemFireUtils;
 import org.springframework.session.events.AbstractSessionEvent;
 import org.springframework.session.events.SessionCreatedEvent;
 import org.springframework.session.events.SessionDeletedEvent;
@@ -51,8 +52,8 @@ import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionShortcut;
 
 /**
- * The EnableGemFireHttpSessionEventsTests class is a test suite of test cases testing the Session Event functiaonlity
- * and behavior of the GemFireOperationsSessionRepository and GemFire's configuration.
+ * The EnableGemFireHttpSessionEventsIntegrationTests class is a test suite of test cases testing the Session Event
+ * functionality and behavior of the GemFireOperationsSessionRepository and GemFire's configuration.
  *
  * @author John Blum
  * @see org.junit.Test
@@ -73,7 +74,7 @@ import com.gemstone.gemfire.cache.RegionShortcut;
 @ContextConfiguration
 @WebAppConfiguration
 @SuppressWarnings("unused")
-public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrationTests {
+public class EnableGemFireHttpSessionEventsIntegrationTests extends AbstractGemFireIntegrationTests {
 
 	private static final int MAX_INACTIVE_INTERVAL_IN_SECONDS = 1;
 
@@ -85,9 +86,10 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 
 	@Before
 	public void setup() {
-		assertThat(gemfireCache, is(notNullValue()));
+		assertThat(GemFireUtils.isPeer(gemfireCache), is(true));
 		assertThat(gemfireSessionRepository, is(notNullValue()));
-		assertThat(gemfireSessionRepository.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
+		assertThat(gemfireSessionRepository.getMaxInactiveIntervalInSeconds(),
+			is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
 		assertThat(sessionEventListener, is(notNullValue()));
 
 		Region<Object, ExpiringSession> sessionRegion = gemfireCache.getRegion(SPRING_SESSION_GEMFIRE_REGION_NAME);
@@ -230,7 +232,7 @@ public class EnableGemFireHttpSessionEventsTests extends AbstractGemFireIntegrat
 		Properties gemfireProperties() {
 			Properties gemfireProperties = new Properties();
 
-			gemfireProperties.setProperty("name", EnableGemFireHttpSessionEventsTests.class.getName());
+			gemfireProperties.setProperty("name", EnableGemFireHttpSessionEventsIntegrationTests.class.getName());
 			gemfireProperties.setProperty("mcast-port", "0");
 			gemfireProperties.setProperty("log-level", GEMFIRE_LOG_LEVEL);
 

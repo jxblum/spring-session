@@ -26,7 +26,6 @@ import static org.junit.Assert.assertThat;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -49,8 +48,10 @@ import org.springframework.data.gemfire.client.ClientCacheFactoryBean;
 import org.springframework.data.gemfire.client.PoolFactoryBean;
 import org.springframework.data.gemfire.config.GemfireConstants;
 import org.springframework.data.gemfire.server.CacheServerFactoryBean;
+import org.springframework.data.gemfire.support.ConnectionEndpoint;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.data.gemfire.config.annotation.web.http.EnableGemFireHttpSession;
+import org.springframework.session.data.gemfire.config.annotation.web.http.GemFireHttpSessionConfiguration;
 import org.springframework.session.data.gemfire.support.GemFireUtils;
 import org.springframework.session.events.AbstractSessionEvent;
 import org.springframework.session.events.SessionCreatedEvent;
@@ -62,6 +63,9 @@ import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.util.FileSystemUtils;
 
 import com.gemstone.gemfire.cache.Cache;
+import com.gemstone.gemfire.cache.DataPolicy;
+import com.gemstone.gemfire.cache.Region;
+import com.gemstone.gemfire.cache.RegionAttributes;
 import com.gemstone.gemfire.cache.client.Pool;
 
 /**
@@ -102,28 +106,47 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 	private SessionEventListener sessionEventListener;
 
 	@BeforeClass
-	public static void setupBeforeClass() throws IOException {
+	public static void startGemFireServer() throws IOException {
 		final long t0 = System.currentTimeMillis();
-		// TODO remove following line when SGF-4XX is closed (& released).
+
+		// TODO remove following line when SGF-458 is closed/released
 		System.setProperty("gemfire.log-level", GEMFIRE_LOG_LEVEL);
-		processWorkingDirectory = createDirectory(String.format("client-server-tests-%1$s", TIMESTAMP.format(new Date())));
+
+		String processWorkingDirectoryPathname = String.format("client-server-tests-%1$s",
+			TIMESTAMP.format(new Date()));
+
+		processWorkingDirectory = createDirectory(processWorkingDirectoryPathname);
 		gemfireServer = run(SpringSessionGemFireServerConfiguration.class, processWorkingDirectory);
-		waitForProcessToStart(processWorkingDirectory);
-		System.err.printf("GemFire Server startup time is %1$d second(s)%n", TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - t0));
+
+		waitForProcessToStart(gemfireServer, processWorkingDirectory);
+
+		System.err.printf("GemFire Server startup time [%1$d ms]%n", System.currentTimeMillis() - t0);
 	}
 
 	@AfterClass
-	public static void tearDownAfterClass() {
+	public static void stopGemFireServerAndCleanupArtifacts() {
 		if (gemfireServer != null) {
 			gemfireServer.destroyForcibly();
 		}
 
 		FileSystemUtils.deleteRecursively(processWorkingDirectory);
+		waitForClientCacheToClose(TimeUnit.SECONDS.toMillis(5));
 	}
 
 	@Before
 	public void setup() {
 		assertThat(GemFireUtils.isClient(gemfireCache), is(true));
+
+		Region<Object, ExpiringSession> springSessionGemFireRegion = gemfireCache.getRegion(
+			GemFireHttpSessionConfiguration.DEFAULT_SPRING_SESSION_GEMFIRE_REGION_NAME);
+
+		assertThat(springSessionGemFireRegion, is(notNullValue()));
+
+		RegionAttributes<Object, ExpiringSession> springSessionGemFireRegionAttributes =
+			springSessionGemFireRegion.getAttributes();
+
+		assertThat(springSessionGemFireRegionAttributes, is(notNullValue()));
+		assertThat(springSessionGemFireRegionAttributes.getDataPolicy(), is(equalTo(DataPolicy.EMPTY)));
 	}
 
 	@After
@@ -148,6 +171,8 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 		assertThat(createdSession.getCreationTime(), is(greaterThanOrEqualTo(beforeOrAtCreationTime)));
 		assertThat(createdSession.getLastAccessedTime(), is(equalTo(createdSession.getCreationTime())));
 		assertThat(createdSession.getMaxInactiveIntervalInSeconds(), is(equalTo(MAX_INACTIVE_INTERVAL_IN_SECONDS)));
+
+		gemfireSessionRepository.delete(expectedSession.getId());
 	}
 
 	@Test
@@ -166,7 +191,7 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 
 		// NOTE for some reason or another, performing a GemFire (Client)Cache Region.get(key)
 		// causes a Region CREATE event... o.O
-		// call sessionEventListener.getSessionEvent() to clear the event
+		// calling sessionEventListener.getSessionEvent() here to clear the event
 		sessionEventListener.getSessionEvent();
 
 		sessionEvent = sessionEventListener.waitForSessionEvent(TimeUnit.SECONDS.toMillis(
@@ -207,32 +232,40 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 		@Bean
 		Properties gemfireProperties() {
 			Properties gemfireProperties = new Properties();
-//			TODO uncomment when SGF-4XX is closed (& released).
+//			TODO uncomment when SGF-458 is closed/released.
 //			gemfireProperties.setProperty("name", ClientServerGemFireOperationsSessionRepositoryIntegrationTests.class.getName());
 //			gemfireProperties.setProperty("log-level", GEMFIRE_LOG_LEVEL);
 			return gemfireProperties;
 		}
 
-		@Bean
+		@Bean(name = GemfireConstants.DEFAULT_GEMFIRE_POOL_NAME)
 		PoolFactoryBean gemfirePool() {
 			PoolFactoryBean poolFactory = new PoolFactoryBean();
 
 			poolFactory.setName(GemfireConstants.DEFAULT_GEMFIRE_POOL_NAME);
+			poolFactory.setFreeConnectionTimeout(2000);
 			poolFactory.setKeepAlive(false);
 			poolFactory.setMinConnections(1);
 			poolFactory.setMaxConnections(1);
-			poolFactory.setReadTimeout(5000);
+			poolFactory.setReadTimeout(2000);
 			poolFactory.setSubscriptionEnabled(true);
-			poolFactory.setServers(Collections.singletonList(new InetSocketAddress(SERVER_HOSTNAME, SERVER_PORT)));
+			poolFactory.setServerEndpoints(Collections.singletonList(
+				new ConnectionEndpoint(SERVER_HOSTNAME, SERVER_PORT)));
 
 			return poolFactory;
 		}
 
 		@Bean
 		ClientCacheFactoryBean gemfireCache(Pool gemfirePool) {
+//			TODO replace the following declaration with the declaration below overriding the resolveProperties() method when SGF-458 is closed/released
 			ClientCacheFactoryBean clientCacheFactory = new ClientCacheFactoryBean();
 
-			clientCacheFactory.setLazyInitialize(false);
+//			ClientCacheFactoryBean clientCacheFactory = new ClientCacheFactoryBean() {
+//				@Override protected Properties resolveProperties() {
+//					return gemfireProperties();
+//				}
+//			};
+
 			clientCacheFactory.setProperties(gemfireProperties());
 			clientCacheFactory.setPool(gemfirePool);
 			clientCacheFactory.setUseBeanFactoryLocator(false);
@@ -255,6 +288,7 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 
 			gemfireProperties.setProperty("name", SpringSessionGemFireServerConfiguration.class.getName());
 			gemfireProperties.setProperty("mcast-port", "0");
+			gemfireProperties.setProperty("log-file", "server.log");
 			gemfireProperties.setProperty("log-level", GEMFIRE_LOG_LEVEL);
 
 			return gemfireProperties;
@@ -264,7 +298,6 @@ public class ClientServerGemFireOperationsSessionRepositoryIntegrationTests exte
 		CacheFactoryBean gemfireCache() {
 			CacheFactoryBean gemfireCache = new CacheFactoryBean();
 
-			gemfireCache.setLazyInitialize(false);
 			gemfireCache.setProperties(gemfireProperties());
 			gemfireCache.setUseBeanFactoryLocator(false);
 

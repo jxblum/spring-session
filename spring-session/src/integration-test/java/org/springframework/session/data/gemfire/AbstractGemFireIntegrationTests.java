@@ -37,25 +37,26 @@ import org.springframework.session.data.gemfire.support.GemFireUtils;
 import org.springframework.session.events.AbstractSessionEvent;
 
 import com.gemstone.gemfire.cache.Cache;
+import com.gemstone.gemfire.cache.CacheClosedException;
 import com.gemstone.gemfire.cache.DataPolicy;
 import com.gemstone.gemfire.cache.ExpirationAction;
 import com.gemstone.gemfire.cache.ExpirationAttributes;
 import com.gemstone.gemfire.cache.GemFireCache;
 import com.gemstone.gemfire.cache.Region;
+import com.gemstone.gemfire.cache.client.ClientCache;
+import com.gemstone.gemfire.cache.client.ClientCacheFactory;
 
 /**
  * AbstractGemFireIntegrationTests is an abstract base class encapsulating common operations for writing
  * Spring Session GemFire integration tests.
  *
  * @author John Blum
- * @see org.springframework.context.ApplicationListener
  * @see org.springframework.session.ExpiringSession
  * @see org.springframework.session.events.AbstractSessionEvent
  * @see com.gemstone.gemfire.cache.Cache
- * @see com.gemstone.gemfire.cache.DataPolicy
- * @see com.gemstone.gemfire.cache.ExpirationAttributes
  * @see com.gemstone.gemfire.cache.GemFireCache
  * @see com.gemstone.gemfire.cache.Region
+ * @see com.gemstone.gemfire.cache.client.ClientCache
  * @since 1.1.0
  */
 @SuppressWarnings("unused")
@@ -63,12 +64,12 @@ public class AbstractGemFireIntegrationTests {
 
 	protected static final boolean DEFAULT_ENABLE_QUERY_DEBUGGING = false;
 
-	protected static final long DEFAULT_INTERVAL = 500l;
-	protected static final long DEFAULT_PROCESS_WAIT_DURATION = TimeUnit.SECONDS.toMillis(20);
+	protected static final long DEFAULT_WAIT_DURATION = TimeUnit.SECONDS.toMillis(20);
+	protected static final long DEFAULT_WAIT_INTERVAL = 500l;
 
 	protected static final File WORKING_DIRECTORY = new File(System.getProperty("user.dir"));
 
-	protected static final String DEFAULT_PROCESS_CONTROL_FILENAME = "process.cntrl";
+	protected static final String DEFAULT_PROCESS_CONTROL_FILENAME = "process.ctl";
 
 	@Autowired
 	protected Cache gemfireCache;
@@ -81,6 +82,7 @@ public class AbstractGemFireIntegrationTests {
 		System.setProperty("gemfire.Query.VERBOSE", String.valueOf(enableQueryDebugging()));
 	}
 
+	/* (non-Javadoc) */
 	protected static File createDirectory(String pathname) {
 		File directory = new File(WORKING_DIRECTORY, pathname);
 
@@ -92,7 +94,8 @@ public class AbstractGemFireIntegrationTests {
 		return directory;
 	}
 
-	protected static List<String> createJavaProcessCommandLineFrom(Class type, String... args) {
+	/* (non-Javadoc) */
+	protected static List<String> createJavaProcessCommandLine(Class type, String... args) {
 		List<String> commandLine = new ArrayList<String>();
 
 		String javaHome = System.getProperty("java.home");
@@ -112,19 +115,53 @@ public class AbstractGemFireIntegrationTests {
 		return commandLine;
 	}
 
+	/* (non-Javadoc) */
 	protected static Process run(Class type, File directory) throws IOException {
 		return new ProcessBuilder()
-			.command(createJavaProcessCommandLineFrom(type))
+			.command(createJavaProcessCommandLine(type))
 			.directory(directory)
 			.start();
 	}
 
-	protected static void waitForProcessToStart(File directory) {
-		waitForProcessToStart(directory, DEFAULT_PROCESS_WAIT_DURATION);
+	// NOTE this method would not be necessary except Spring Sessions' build does not fork the test JVM
+	// for every test class.
+	/* (non-Javadoc) */
+	protected static void waitForClientCacheToClose(long duration) {
+		ClientCache clientCache = null;
+
+		try {
+			clientCache = ClientCacheFactory.getAnyInstance();
+			clientCache.close();
+
+			long timeout = (System.currentTimeMillis() + duration);
+
+			while (!clientCache.isClosed() && System.currentTimeMillis() < timeout) {
+				try {
+					synchronized (ClientCacheFactory.class) {
+						TimeUnit.MILLISECONDS.timedWait(ClientCacheFactory.class, DEFAULT_WAIT_INTERVAL);
+					}
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			}
+		}
+		catch (CacheClosedException ignore) {
+		}
+		finally {
+			System.err.printf("GemFire ClientCache closed [%1$s]%n", (clientCache == null || clientCache.isClosed()));
+		}
 	}
 
+	/* (non-Javadoc) */
+	protected static void waitForProcessToStart(Process process, File directory) {
+		waitForProcessToStart(process, directory, DEFAULT_WAIT_DURATION);
+	}
+
+	/* (non-Javadoc) */
 	@SuppressWarnings("all")
-	protected static void waitForProcessToStart(File directory, long duration) {
+	protected static void waitForProcessToStart(Process process, File directory, long duration) {
 		File processControlFile = new File(directory, DEFAULT_PROCESS_CONTROL_FILENAME);
 
 		final long timeout = (System.currentTimeMillis() + duration);
@@ -132,16 +169,17 @@ public class AbstractGemFireIntegrationTests {
 		while (!processControlFile.isFile() && System.currentTimeMillis() < timeout) {
 			try {
 				synchronized (processControlFile) {
-					TimeUnit.MILLISECONDS.timedWait(processControlFile, DEFAULT_INTERVAL);
+					TimeUnit.MILLISECONDS.timedWait(processControlFile, DEFAULT_WAIT_INTERVAL);
 				}
 			}
 			catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
-				return;
+				break;
 			}
 		}
 	}
 
+	/* (non-Javadoc) */
 	protected static File writeProcessControlFile(File path) throws IOException {
 		assertThat(path != null && path.isDirectory(), is(true));
 
@@ -154,6 +192,7 @@ public class AbstractGemFireIntegrationTests {
 		return processControl;
 	}
 
+	/* (non-Javadoc) */
 	protected void assertRegion(Region<?, ?> actualRegion, String expectedName, DataPolicy expectedDataPolicy) {
 		assertThat(actualRegion, is(notNullValue()));
 		assertThat(actualRegion.getName(), is(equalTo(expectedName)));
@@ -162,10 +201,12 @@ public class AbstractGemFireIntegrationTests {
 		assertThat(actualRegion.getAttributes().getDataPolicy(), is(equalTo(expectedDataPolicy)));
 	}
 
+	/* (non-Javadoc) */
 	protected void assertEntryIdleTimeout(Region<?, ?> region, ExpirationAction expectedAction, int expectedTimeout) {
 		assertEntryIdleTimeout(region.getAttributes().getEntryIdleTimeout(), expectedAction, expectedTimeout);
 	}
 
+	/* (non-Javadoc) */
 	protected void assertEntryIdleTimeout(ExpirationAttributes actualExpirationAttributes,
 			ExpirationAction expectedAction, int expectedTimeout) {
 		assertThat(actualExpirationAttributes, is(notNullValue()));
@@ -173,10 +214,12 @@ public class AbstractGemFireIntegrationTests {
 		assertThat(actualExpirationAttributes.getTimeout(), is(equalTo(expectedTimeout)));
 	}
 
+	/* (non-Javadoc) */
 	protected boolean enableQueryDebugging() {
 		return DEFAULT_ENABLE_QUERY_DEBUGGING;
 	}
 
+	/* (non-Javadoc) */
 	protected List<String> listRegions(GemFireCache gemfireCache) {
 		Set<Region<?, ?>> regions = gemfireCache.rootRegions();
 
@@ -189,6 +232,7 @@ public class AbstractGemFireIntegrationTests {
 		return regionList;
 	}
 
+	/* (non-Javadoc) */
 	@SuppressWarnings("unchecked")
 	protected <T extends ExpiringSession> T createSession() {
 		T expiringSession = (T) gemfireSessionRepository.createSession();
@@ -196,6 +240,7 @@ public class AbstractGemFireIntegrationTests {
 		return expiringSession;
 	}
 
+	/* (non-Javadoc) */
 	@SuppressWarnings("unchecked")
 	protected <T extends ExpiringSession> T createSession(String principalName) {
 		GemFireOperationsSessionRepository.GemFireSession session = createSession();
@@ -203,26 +248,37 @@ public class AbstractGemFireIntegrationTests {
 		return (T) session;
 	}
 
+	/* (non-Javadoc) */
 	protected <T extends ExpiringSession> T expire(T session) {
 		session.setLastAccessedTime(0l);
 		return session;
 	}
 
+	/* (non-Javadoc) */
 	@SuppressWarnings("unchecked")
 	protected <T extends ExpiringSession> T get(String sessionId) {
 		return (T) gemfireSessionRepository.getSession(sessionId);
 	}
 
+	/* (non-Javadoc) */
 	protected <T extends ExpiringSession> T save(T session) {
 		gemfireSessionRepository.save(session);
 		return session;
 	}
 
+	/* (non-Javadoc) */
 	protected <T extends ExpiringSession> T touch(T session) {
 		session.setLastAccessedTime(System.currentTimeMillis());
 		return session;
 	}
 
+	/**
+	 * The SessionEventListener class is a Spring {@link ApplicationListener} listening for Spring HTTP Session
+	 * application events.
+	 *
+	 * @see org.springframework.context.ApplicationListener
+	 * @see org.springframework.session.events.AbstractSessionEvent
+	 */
 	public static class SessionEventListener implements ApplicationListener<AbstractSessionEvent> {
 
 		private AbstractSessionEvent sessionEvent;
@@ -248,10 +304,12 @@ public class AbstractGemFireIntegrationTests {
 			while (sessionEvent == null && System.currentTimeMillis() < timeout) {
 				try {
 					synchronized (lock) {
-						TimeUnit.MILLISECONDS.timedWait(lock, DEFAULT_INTERVAL);
+						TimeUnit.MILLISECONDS.timedWait(lock, DEFAULT_WAIT_INTERVAL);
 					}
 				}
 				catch (InterruptedException ignore) {
+					Thread.currentThread().interrupt();
+					break;
 				}
 				finally {
 					sessionEvent = getSessionEvent();
@@ -262,4 +320,5 @@ public class AbstractGemFireIntegrationTests {
 		}
 
 	}
+
 }

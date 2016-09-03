@@ -30,13 +30,14 @@ import org.springframework.data.gemfire.server.CacheServerFactoryBean;
 import org.springframework.session.data.gemfire.config.annotation.web.http.EnableGemFireHttpSession;
 
 // tag::class[]
-@EnableGemFireHttpSession(maxInactiveIntervalInSeconds = 30) // <1>
+@EnableGemFireHttpSession(maxInactiveIntervalInSeconds = 60) // <1>
 public class ServerConfig {
 
 	static final int MAX_CONNECTIONS = 50;
 	static final int SERVER_PORT = 12480;
 
-	static final String SERVER_HOSTNAME = "localhost";
+	//static final String SERVER_HOSTNAME = "172.28.128.3";
+	static final String SERVER_HOSTNAME = "10.99.199.8";
 
 	@Bean
 	PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
@@ -57,7 +58,7 @@ public class ServerConfig {
 	}
 
 	private String logLevel() {
-		return System.getProperty("sample.httpsession.gemfire.log-level", "warning");
+		return System.getProperty("sample.httpsession.gemfire.log-level", "config");
 	}
 
 	@Bean
@@ -79,7 +80,7 @@ public class ServerConfig {
 		cacheServerFactory.setAutoStartup(true);
 		cacheServerFactory.setBindAddress(SERVER_HOSTNAME);
 		cacheServerFactory.setCache(gemfireCache);
-		cacheServerFactory.setHostNameForClients(SERVER_HOSTNAME);
+		//cacheServerFactory.setHostNameForClients(SERVER_HOSTNAME);
 		cacheServerFactory.setMaxConnections(MAX_CONNECTIONS);
 		cacheServerFactory.setPort(port);
 

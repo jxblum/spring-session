@@ -42,7 +42,7 @@ import org.springframework.session.data.gemfire.support.GemFireUtils;
 import org.springframework.util.Assert;
 
 // tag::class[]
-@EnableGemFireHttpSession(maxInactiveIntervalInSeconds = 30) // <1>
+@EnableGemFireHttpSession(maxInactiveIntervalInSeconds = 60) // <1>
 public class ClientConfig {
 
 	static final long DEFAULT_WAIT_DURATION = TimeUnit.SECONDS.toMillis(20);
@@ -64,7 +64,7 @@ public class ClientConfig {
 	}
 
 	private static String logLevel() {
-		return System.getProperty("sample.httpsession.gemfire.log-level", "warning");
+		return System.getProperty("sample.httpsession.gemfire.log-level", "config");
 	}
 
 	@Bean

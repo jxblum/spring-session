@@ -17,10 +17,7 @@
 package sample
 
 import geb.spock.*
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.test.IntegrationTest
-import org.springframework.boot.test.SpringApplicationConfiguration
-import org.springframework.boot.test.SpringApplicationContextLoader
+import org.springframework.boot.test.context.SpringBootContextLoader
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.web.WebAppConfiguration
 import sample.pages.HomePage
@@ -34,9 +31,8 @@ import pages.*
  * @author Rob Winch
  */
 @Stepwise
-@ContextConfiguration(classes = Application, loader = SpringApplicationContextLoader)
+@ContextConfiguration(classes = Application, loader = SpringBootContextLoader)
 @WebAppConfiguration
-@IntegrationTest
 class BootTests extends GebReportingSpec {
 
 	def 'Unauthenticated user sent to log in page'() {

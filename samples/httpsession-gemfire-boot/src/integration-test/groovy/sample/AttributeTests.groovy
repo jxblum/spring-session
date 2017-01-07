@@ -17,14 +17,13 @@
 package sample
 
 import geb.spock.GebReportingSpec
-import org.springframework.boot.test.IntegrationTest
-import org.springframework.boot.test.SpringApplicationContextLoader
+import org.springframework.boot.test.context.SpringBootContextLoader
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.web.WebAppConfiguration
+import pages.*
 import sample.client.Application
 import sample.pages.HomePage
 import spock.lang.Stepwise
-import pages.*
 
 /**
  * Tests the CAS sample application using service tickets.
@@ -33,10 +32,10 @@ import pages.*
  * @author John Blum
  */
 @Stepwise
-@IntegrationTest
+@ContextConfiguration(classes = Application, loader=SpringBootContextLoader)
 @WebAppConfiguration
-@ContextConfiguration(classes = Application, loader = SpringApplicationContextLoader)
 class AttributeTests extends GebReportingSpec {
+
 	def 'first visit no attributes'() {
 		when:
 		to HomePage

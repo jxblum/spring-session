@@ -28,10 +28,9 @@ tasks.findByPath("artifactoryPublish")?.enabled = false
 
 dependencies {
 		testCompile project(':spring-session'),
+				project(':spring-session-data-gemfire'),
 				project(':spring-session-data-mongo'),
-				"org.springframework.data:spring-data-gemfire:$springDataGemFireVersion",
-				"org.springframework.data:spring-data-redis:$springDataRedisVersion",
-				"org.springframework.data:spring-data-gemfire:$springDataGemFireVersion",
+				project(':spring-session-data-redis'),
 				"org.springframework:spring-webmvc:${springVersion}",
 				"org.springframework:spring-websocket:${springVersion}",
 				"org.springframework:spring-messaging:${springVersion}",

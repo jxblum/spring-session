@@ -5,18 +5,15 @@ import sample.Application
 import samples.pages.*
 import spock.lang.Stepwise
 
-import org.springframework.boot.test.IntegrationTest
-import org.springframework.boot.test.SpringApplicationContextLoader
-import org.springframework.test.context.ContextConfiguration
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.web.WebAppConfiguration
 
 /**
  * @author jitendra on 15/3/16.
  */
 @Stepwise
-@ContextConfiguration(classes = Application, loader = SpringApplicationContextLoader)
+@SpringBootTest(classes = Application)
 @WebAppConfiguration
-@IntegrationTest
 class HttpRedisJsonTest extends GebSpec {
 
 	def'login page test'() {

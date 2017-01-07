@@ -16,13 +16,7 @@
 
 package sample
 
-import geb.Browser
-import geb.spock.*
-
-import org.openqa.selenium.htmlunit.HtmlUnitDriver
-import org.springframework.boot.test.IntegrationTest
-import org.springframework.boot.test.SpringApplicationContextLoader
-import org.springframework.test.context.ContextConfiguration
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.web.WebAppConfiguration
 
 import pages.*
@@ -36,9 +30,8 @@ import spock.lang.Stepwise
  * @author Rob Winch
  */
 @Stepwise
-@ContextConfiguration(classes = FindByUsernameApplication, loader = SpringApplicationContextLoader)
+@SpringBootTest(classes = FindByUsernameApplication)
 @WebAppConfiguration
-@IntegrationTest
 class FindByUsernameTests extends MultiBrowserGebSpec {
 	def 'Unauthenticated user sent to log in page'() {
 		given: 'unauthenticated user request protected page'
